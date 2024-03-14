@@ -1,0 +1,14 @@
+
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m0+"
+    nvic: nvic
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    systickFrequency: 32768
+    priorityMask: 0xC0
+    IRQ -> cpu@0
+
+pm: Miscellaneous.Saml22PM @ sysbus 0x40000400
+
+nvmctrl: MemoryControllers.Saml22NVMCTRL @ sysbus 0x41004000

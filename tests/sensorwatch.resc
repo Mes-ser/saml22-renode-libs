@@ -1,0 +1,12 @@
+
+### INCLUDES ###
+include @peripherals/MemoryControllers/Saml22NVMCTRL.cs
+include @peripherals/Miscellaneous/Saml22PM.cs
+
+
+mach create
+machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
+
+sysbus LoadELF @build/watch.elf
+
+sysbus LogAllPeripheralsAccess true
