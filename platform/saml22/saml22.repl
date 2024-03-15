@@ -3,6 +3,7 @@
 cpu: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     nvic: nvic
+    PerformanceInMips: 1
 
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
     systickFrequency: 32768
@@ -10,5 +11,7 @@ nvic: IRQControllers.NVIC @ sysbus 0xE000E000
     IRQ -> cpu@0
 
 pm: Miscellaneous.Saml22PM @ sysbus 0x40000400
+
+osc32kctrl: Miscellaneous.Saml22OSC32KCTRL @ sysbus 0x40001400
 
 nvmctrl: MemoryControllers.Saml22NVMCTRL @ sysbus 0x41004000

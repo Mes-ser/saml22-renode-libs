@@ -2,11 +2,14 @@
 ### INCLUDES ###
 include @peripherals/MemoryControllers/Saml22NVMCTRL.cs
 include @peripherals/Miscellaneous/Saml22PM.cs
-
+include @peripherals/Miscellaneous/Saml22OSC32KCTRL.cs
 
 mach create
 machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
 
 sysbus LoadELF @build/watch.elf
 
-sysbus LogAllPeripheralsAccess true
+# sysbus LogAllPeripheralsAccess true
+
+
+sysbus Tag <0x4000100C 0x4> "OSCCTRL::Status" 0x00000111
