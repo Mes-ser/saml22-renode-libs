@@ -13,7 +13,7 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         public long Size => 0x400;
 
         [IrqProvider]
-        public GPIO IRQ { get; }
+        public GPIO IRQ { get; } = new GPIO();
 
         public void Reset()
         {
@@ -33,7 +33,6 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
             this.WarningLog("NVMCTRL not implemented at all. It's just a stub.");
             this.machine = machine;
 
-            IRQ = new GPIO();
             IRQManager = new InterruptManager<Interrupts>(this);
 
             byteRegisters = new ByteRegisterCollection(this);
@@ -45,9 +44,10 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
 
         private readonly Machine machine;
         private readonly InterruptManager<Interrupts> IRQManager; 
-        private ByteRegisterCollection byteRegisters;
-        private WordRegisterCollection wordRegisters;
-        private DoubleWordRegisterCollection doubleWordRegisters;
+        private readonly ByteRegisterCollection byteRegisters;
+        private readonly WordRegisterCollection wordRegisters;
+        private readonly DoubleWordRegisterCollection doubleWordRegisters;
+        private IValueRegisterField nvmAddress;
 
         private void DefineRegisters()
         {
@@ -61,11 +61,25 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
                 if(newValue)
                     IRQManager.ClearInterrupt(irq);
             }, valueProviderCallback: (irq, _) => {
+                if(irq == Interrupts.Ready)
+                    return true;
                 return IRQManager.IsSet(irq);
             }));
 
-            wordRegisters.DefineRegister((long)Registers.Status); // SB determined by value in NV Memory
-            doubleWordRegisters.DefineRegister((long)Registers.Address);
+            wordRegisters.DefineRegister((long)Registers.Status) // SB determined by value in NV Memory
+                .WithFlag(0, FieldMode.Read, name: "PRM")
+                .WithFlag(1, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOAD")
+                .WithFlag(2, FieldMode.Read | FieldMode.WriteOneToClear, name: "PROGE")
+                .WithFlag(3, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOCKE")
+                .WithFlag(4, FieldMode.Read | FieldMode.WriteOneToClear, name: "NVME")
+                .WithIgnoredBits(5, 3)
+                .WithFlag(8, FieldMode.Read, name: "SB")
+                .WithIgnoredBits(9, 7);
+
+            doubleWordRegisters.DefineRegister((long)Registers.Address)
+                .WithValueField(0, 22, out nvmAddress, name: "ADDR")
+                .WithIgnoredBits(22, 10);
+
             wordRegisters.DefineRegister((long)Registers.LockSection); // Reset value determined by NV memory user row
         }
 

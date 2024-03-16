@@ -14,7 +14,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public long Size => 0x400;
 
         [IrqProvider]
-        public GPIO IRQ { get; }
+        public GPIO IRQ { get; } = new GPIO();
 
         public void Reset()
         {
@@ -27,8 +27,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.WarningLog("PM not implemented at all. It's just a stub.");
 
             this.machine = machine;
-
-            IRQ = new GPIO();
 
             IRQManager = new InterruptManager<Interrupts>(this);
 
