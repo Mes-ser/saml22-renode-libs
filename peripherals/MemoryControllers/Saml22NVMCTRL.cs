@@ -10,10 +10,19 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
 {
     public class Saml22NVMCTRL : IBytePeripheral, IWordPeripheral, IDoubleWordPeripheral, IKnownSize
     {
-        public long Size => 0x400;
+
+        public const long MEM_BASE_ADDR = 0x400000;
+        public long Size => 0x2000;
 
         [IrqProvider]
         public GPIO IRQ { get; } = new GPIO();
+
+        public string ImageFile {
+            get => ImageFile;
+            set {
+
+            }
+        }
 
         public void Reset()
         {
@@ -27,7 +36,7 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
         public void WriteWord(long offset, ushort value) => wordRegisters.Write(offset, value);
         public void WriteDoubleWord(long offset, uint value) => doubleWordRegisters.Write(offset, value);
-        
+
         public Saml22NVMCTRL(Machine machine)
         {
             this.WarningLog("NVMCTRL not implemented at all. It's just a stub.");
@@ -43,7 +52,7 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         }
 
         private readonly Machine machine;
-        private readonly InterruptManager<Interrupts> IRQManager; 
+        private readonly InterruptManager<Interrupts> IRQManager;
         private readonly ByteRegisterCollection byteRegisters;
         private readonly WordRegisterCollection wordRegisters;
         private readonly DoubleWordRegisterCollection doubleWordRegisters;

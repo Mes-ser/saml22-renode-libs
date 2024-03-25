@@ -3,6 +3,14 @@
 include @peripherals/MemoryControllers/Saml22NVMCTRL.cs
 include @peripherals/Miscellaneous/Saml22PM.cs
 include @peripherals/Miscellaneous/Saml22OSC32KCTRL.cs
+include @peripherals/Miscellaneous/Saml22GCLK.cs
+include @peripherals/Miscellaneous/Saml22SUPC.cs
+include @peripherals/Miscellaneous/Saml22MCLK.cs
+include @peripherals/Miscellaneous/Saml22OSCCTRL.cs
+include @peripherals/Miscellaneous/Saml22RTC.cs
+include @peripherals/Analog/Saml22ADC.cs
+include @peripherals/USB/Saml22USB.cs
+include @peripherals/GPIOPort/Saml22Port.cs
 
 mach create
 machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
@@ -13,3 +21,6 @@ sysbus LogAllPeripheralsAccess true
 
 
 sysbus Tag <0x4000100C 0x4> "OSCCTRL::Status" 0x00000111
+
+
+start

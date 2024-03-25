@@ -7,7 +7,7 @@ namespace Antmicro.Renode.Peripherals
         FlashBaseAddress = 0x0,
         SRAMBaseAddress = 0x2000000,
         // Bridge A
-        PACBaseAddress = 0x4000000,
+        PACBaseAddress = 0x40000000,
         PMBaseAddress = 0x40000400,
         MCLKBaseAddress = 0x40000800,
         RSTCBaseAddress = 0x40000C00,

@@ -3,7 +3,7 @@ using "../saml22.repl"
 flash: Memory.MappedMemory @ sysbus 0x00000000
     size: 0x40000
 
-rww: Memory.MappedMemory @ sysbus 0x00400000
+rww: Memory.MappedMemory @ sysbus 0x400000
     size: 0x2000
 
 sram: Memory.MappedMemory @ sysbus 0x20000000

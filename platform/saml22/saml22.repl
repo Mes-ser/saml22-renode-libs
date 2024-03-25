@@ -12,6 +12,26 @@ nvic: IRQControllers.NVIC @ sysbus 0xE000E000
 
 pm: Miscellaneous.Saml22PM @ sysbus 0x40000400
 
+
+mclk: Miscellaneous.Saml22MCLK @ sysbus 0x40000800
+
+oscctrl: Miscellaneous.Saml22OSCCTRL @ sysbus 0x40001000
+
 osc32kctrl: Miscellaneous.Saml22OSC32KCTRL @ sysbus 0x40001400
 
+supc: Miscellaneous.Saml22SUPC @ sysbus 0x40001800
+
+gclk: Miscellaneous.Saml22GCLK @ sysbus 0x40001C00
+
+rtc: Miscellaneous.Saml22RTC @ sysbus 0x40002400
+
+usb: USB.Saml22USB @ sysbus 0x41000000
+
 nvmctrl: MemoryControllers.Saml22NVMCTRL @ sysbus 0x41004000
+
+port: GPIOPort.Saml22Port @ {
+        sysbus 0x41006000;
+        sysbus new Bus.BusMultiRegistration { address: 0x60000000; size: 0x200; region: "IOBUS" }
+    }
+
+adc: Analog.Saml22ADC @ sysbus 0x42003000
