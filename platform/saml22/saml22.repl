@@ -29,9 +29,13 @@ usb: USB.Saml22USB @ sysbus 0x41000000
 
 nvmctrl: MemoryControllers.Saml22NVMCTRL @ sysbus 0x41004000
 
+
+// tried to implement PORT as one peripheral to comply with what is written in datasheet, but maybe that's not best solution here.
 port: GPIOPort.Saml22Port @ {
         sysbus 0x41006000;
         sysbus new Bus.BusMultiRegistration { address: 0x60000000; size: 0x200; region: "IOBUS" }
     }
+pa: GPIOPort.Saml22PortGroup @ port 0
+pb: GPIOPort.Saml22PortGroup @ port 1
 
 adc: Analog.Saml22ADC @ sysbus 0x42003000
