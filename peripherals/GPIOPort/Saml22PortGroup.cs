@@ -131,8 +131,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 bool wrpinconf = BitHelper.IsBitSet(value, 30);
                 uint hwsel = BitHelper.GetValue(value, 31, 1);
 
-                this.WarningLog($"[{pinMask:x}][{pmuxen}][{inen}][{pullen}][{drvstr}][{pmux:x}][{wrpmux}][{wrpinconf}][{hwsel:x}]");
-
                 if(wrpinconf){
                     BitHelper.ForeachActiveBit(pinMask, pinID => {
                         pads[pinID + 16 * hwsel].PeripheralMultiplexerEnable = pmuxen;

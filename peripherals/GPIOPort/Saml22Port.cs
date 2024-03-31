@@ -3,10 +3,8 @@
 using System.Collections.Generic;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure;
-using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
-using Dynamitey.DynamicObjects;
 
 namespace Antmicro.Renode.Peripherals.GPIOPort
 {

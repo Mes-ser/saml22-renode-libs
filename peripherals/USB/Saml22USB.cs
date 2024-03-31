@@ -1,18 +1,23 @@
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
+using Antmicro.Renode.Core.USB;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 
 namespace Antmicro.Renode.Peripherals.USB
 {
-    public class Saml22USB : IDoubleWordPeripheral, IWordPeripheral, IBytePeripheral, IKnownSize
+    public class Saml22USB : IUSBDevice, IDoubleWordPeripheral, IWordPeripheral, IBytePeripheral, IKnownSize
     {
         public long Size => 0x2000;
+
+        public USBDeviceCore USBCore { get; private set; }
 
         public void Reset()
         {
             doubleWordRegisters.Reset();
             byteRegisters.Reset();
+
+            USBCore = new USBDeviceCore(this);
         }
 
         public uint ReadDoubleWord(long offset) => doubleWordRegisters.Read(offset);
