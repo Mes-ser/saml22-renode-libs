@@ -12,6 +12,16 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         [IrqProvider]
         public GPIO IRQ { get; } = new GPIO();
+        public int XOSC32Frequency
+        { 
+            get => xosc32kFreq;
+            set
+            { 
+                xosc32kReady = value == 32768;
+                IRQManager.SetInterrupt(Interrupts.XOSC32Ready, xosc32kReady);
+                xosc32kFreq = value;
+            } 
+        }
 
         public byte ReadByte(long offset) => byteRegisters.Read(offset);
         public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
@@ -45,11 +55,45 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private readonly ByteRegisterCollection byteRegisters;
         private readonly WordRegisterCollection wordRegisters;
         private readonly DoubleWordRegisterCollection doubleWordRegisters;
+        private bool xosc32kReady;
+        private int xosc32kFreq;
+        private IFlagRegisterField xosc32kEnable;
+        private IFlagRegisterField enable32Koutput;
+        private IFlagRegisterField enable1KOutput;
 
         private void DefineRegisters()
         {
+
+            doubleWordRegisters.AddRegister((long)Registers.InterruptEnableClear, IRQManager.GetInterruptEnableClearRegister<DoubleWordRegister>());
+            doubleWordRegisters.AddRegister((long)Registers.InterruptEnableSet, IRQManager.GetInterruptEnableSetRegister<DoubleWordRegister>());
+            doubleWordRegisters.AddRegister((long)Registers.InterruptFlagStatusandClear, IRQManager.GetRegister<DoubleWordRegister>(
+                writeCallback: (irq, oldValue, newValue) => {
+                    if(newValue) IRQManager.ClearInterrupt(irq);
+            }, valueProviderCallback: (irq, _) => IRQManager.IsSet(irq)));
+
             doubleWordRegisters.DefineRegister((long)Registers.Status)
-                .WithFlag(0, valueProviderCallback: (_) => true);
+                .WithFlag(0, name: "XOSC32RDY", valueProviderCallback: (_) => xosc32kReady && xosc32kEnable.Value);
+
+            byteRegisters.DefineRegister((long)Registers.RTCClockSelectionControl);
+            byteRegisters.DefineRegister((long)Registers.SLCDClockSelectionControl);
+            wordRegisters.DefineRegister((long)Registers.XOSC32KControl, 0x80)
+                .WithIgnoredBits(0, 1)
+                .WithFlag(1, out xosc32kEnable)
+                .WithTaggedFlag("XTALEN", 2)
+                .WithFlag(3, out enable32Koutput)
+                .WithFlag(4, out enable1KOutput)
+                .WithIgnoredBits(5, 1)
+                .WithFlag(6, name:"RUNSTDBY")
+                .WithFlag(7, name:"ONDEMAND")
+                .WithValueField(8, 3, name: "STARTUP")
+                .WithIgnoredBits(11, 1)
+                .WithFlag(12, name: "WRTLOCK")
+                .WithIgnoredBits(13, 3);
+            
+            byteRegisters.DefineRegister((long)Registers.ClockFailureDetectorControl);
+            byteRegisters.DefineRegister((long)Registers.EventControl);
+            doubleWordRegisters.DefineRegister((long)Registers.ULPInt32kControl); // Read from NVM calib
+
         }
 
         private enum Registers : long
@@ -60,10 +104,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             Status = 0x0C,
             RTCClockSelectionControl = 0x10,
             SLCDClockSelectionControl = 0x11,
-            ExternalCrystalOscillatorXOSC32KControl = 0x14,
+            XOSC32KControl = 0x14,
             ClockFailureDetectorControl = 0x16,
             EventControl = 0x17,
-            UltraLowPowerInternalOscillatorOSCULP32KControl = 0x1C,
+            ULPInt32kControl = 0x1C,
 
         }
 

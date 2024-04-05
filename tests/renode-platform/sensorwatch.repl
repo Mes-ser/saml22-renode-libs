@@ -3,3 +3,7 @@ using "../../platform/saml22/saml22j18a/saml22j18a.repl"
 
 pa:
     0 -> pb@1
+
+
+osc32kctrl:
+    XOSC32Frequency: 32768
