@@ -23,7 +23,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             this.DebugLog($"Signal on [{number}] value [{value}]");
             if(!pads[number].Direction)
             {
-                this.WarningLog("Reieved signal on output pin.");
+                this.WarningLog($"Received signal on output pin [{number}].");
                 return;
             }
             pads[number].HandleInput(value);

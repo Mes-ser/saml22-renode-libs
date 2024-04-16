@@ -3,7 +3,9 @@
 cpu: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     nvic: nvic
+    numberOfMPURegions: 8
     PerformanceInMips: 1
+
 
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
     systickFrequency: 32768
@@ -25,12 +27,17 @@ gclk: Miscellaneous.Saml22GCLK @ sysbus 0x40001C00
 
 rtc: Miscellaneous.Saml22RTC @ sysbus 0x40002400
 
+eic: IRQControllers.Saml22EIC @ sysbus 0x40002800
+
 usb: USB.Saml22USB @ sysbus 0x41000000
 
 nvmctrl: MemoryControllers.Saml22NVMCTRL @ sysbus 0x41004000
 
+tcc0: Timers.Saml22TCC @ sysbus 0x42001C00
 
-// tried to implement PORT as one peripheral to comply with what is written in datasheet, but maybe that's not best solution here.
+slcd: Miscellaneous.Saml22SLCD @ sysbus 0x42003C00
+
+
 port: GPIOPort.Saml22Port @ {
         sysbus 0x41006000;
         sysbus new Bus.BusMultiRegistration { address: 0x60000000; size: 0x200; region: "IOBUS" }

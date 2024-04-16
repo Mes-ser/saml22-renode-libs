@@ -2,12 +2,16 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Antmicro.Renode.Utilities;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class Saml22SUPC : IProvidesRegisterCollection<DoubleWordRegisterCollection>, IDoubleWordPeripheral, IKnownSize
     {
         public long Size => 0x400;
+
+        [IrqProvider]
+        public GPIO IRQ { get; } = new GPIO();
 
         public DoubleWordRegisterCollection RegistersCollection => registers;
 
@@ -24,13 +28,35 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.WarningLog("SUPC is a stub. Does nothing.");
             this.machine = machine;
 
+            IRQManager = new InterruptManager<Interrupts>(this);
+
             registers = new DoubleWordRegisterCollection(this);
 
-            registers.DefineRegister((long)Registers.Status, 0x701); // Temporary solution
+            registers.AddRegister((long)Registers.InterruptEnableClear, IRQManager.GetInterruptEnableClearRegister<DoubleWordRegister>());
+            registers.AddRegister((long)Registers.InterruptEnableSet, IRQManager.GetInterruptEnableSetRegister<DoubleWordRegister>());
+            registers.AddRegister((long)Registers.InterruptFlagStatusandClear, IRQManager.GetRegister<DoubleWordRegister>(
+                writeCallback: (irq, oldValue, newValue) => {
+                    if(newValue)
+                        IRQManager.ClearInterrupt(irq);
+            }));
+            registers.DefineRegister((long)Registers.Status, 0x705); // Temporary solution
         }
 
         private readonly Machine machine;
+
+        private InterruptManager<Interrupts> IRQManager;
+
         private readonly DoubleWordRegisterCollection registers;
+
+        private enum Interrupts
+        {
+            BOD33Ready = 0,
+            BOD33Detection,
+            BOD33SynchronizationReady,
+            VoltageRegulatorReady = 8,
+            AutomaticPowerSwitchReady,
+            VDDCOREVoltageReady
+        }
 
         private enum Registers : long
         {

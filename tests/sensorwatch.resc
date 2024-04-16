@@ -8,8 +8,11 @@ include @peripherals/Miscellaneous/Saml22SUPC.cs
 include @peripherals/Miscellaneous/Saml22MCLK.cs
 include @peripherals/Miscellaneous/Saml22OSCCTRL.cs
 include @peripherals/Miscellaneous/Saml22RTC.cs
+include @peripherals/IRQControllers/Saml22EIC.cs
+include @peripherals/Timers/Saml22TCC.cs
 include @peripherals/Analog/Saml22ADC.cs
 include @peripherals/USB/Saml22USB.cs
+include @peripherals/Miscellaneous/Saml22SLCD.cs
 include @peripherals/GPIOPort/Saml22PortGroup.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.Saml22PortGroup"
 include @peripherals/GPIOPort/Saml22Port.cs
@@ -19,9 +22,9 @@ machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
 
 sysbus LoadELF @build/watch.elf
 
-sysbus LogPeripheralAccess sysbus.osc32kctrl true
-
-
+# sysbus LogPeripheralAccess sysbus.osc32kctrl true
+# sysbus LogPeripheralAccess sysbus.supc true
+# sysbus LogAllPeripheralsAccess True
 sysbus Tag <0x4000100C 0x4> "OSCCTRL::Status" 0x00000111
 
 
