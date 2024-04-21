@@ -1,5 +1,7 @@
 
 ### INCLUDES ###
+include @peripherals/Miscellaneous/Saml22RTC.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.Saml22RTC"
 include @peripherals/MemoryControllers/Saml22NVMCTRL.cs
 include @peripherals/Miscellaneous/Saml22PM.cs
 include @peripherals/Miscellaneous/Saml22OSC32KCTRL.cs
@@ -7,7 +9,6 @@ include @peripherals/Miscellaneous/Saml22GCLK.cs
 include @peripherals/Miscellaneous/Saml22SUPC.cs
 include @peripherals/Miscellaneous/Saml22MCLK.cs
 include @peripherals/Miscellaneous/Saml22OSCCTRL.cs
-include @peripherals/Miscellaneous/Saml22RTC.cs
 include @peripherals/IRQControllers/Saml22EIC.cs
 include @peripherals/Timers/Saml22TCC.cs
 include @peripherals/Analog/Saml22ADC.cs
@@ -22,7 +23,7 @@ machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
 
 sysbus LoadELF @build/watch.elf
 
-# sysbus LogPeripheralAccess sysbus.osc32kctrl true
+#sysbus LogPeripheralAccess sysbus.osc32kctrl true
 # sysbus LogPeripheralAccess sysbus.supc true
 # sysbus LogAllPeripheralsAccess True
 sysbus Tag <0x4000100C 0x4> "OSCCTRL::Status" 0x00000111

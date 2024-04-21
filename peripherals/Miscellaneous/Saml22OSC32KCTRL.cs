@@ -1,7 +1,9 @@
+
+using System.Collections;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
-using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Antmicro.Renode.Peripherals.Timers;
 using Antmicro.Renode.Utilities;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
@@ -12,15 +14,15 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         [IrqProvider]
         public GPIO IRQ { get; } = new GPIO();
-        public int XOSC32Frequency
-        { 
-            get => xosc32kFreq;
-            set
-            { 
-                xosc32kReady = value == 32768;
-                IRQManager.SetInterrupt(Interrupts.XOSC32Ready, xosc32kReady);
-                xosc32kFreq = value;
-            } 
+        public bool UseXOSC32K
+        {
+            get => xosc32kConnected;
+            set => xosc32kConnected = value;
+        }
+        public Saml22RTC RTC
+        {
+            get => rtc;
+            set => rtc = value;
         }
 
         public byte ReadByte(long offset) => byteRegisters.Read(offset);
@@ -35,12 +37,17 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             byteRegisters.Reset();
             wordRegisters.Reset();
             doubleWordRegisters.Reset();
+            OSCULP32K.Reset();
+            XOSC32K.Reset();
         }
 
         public Saml22OSC32KCTRL(Machine machine)
         {
             this.machine = machine;
             IRQManager = new InterruptManager<Interrupts>(this);
+
+            OSCULP32K = new Crystal(this, 32768, true);
+            XOSC32K = new Crystal(this, 32768);
 
             byteRegisters = new ByteRegisterCollection(this);
             wordRegisters = new WordRegisterCollection(this);
@@ -55,45 +62,133 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private readonly ByteRegisterCollection byteRegisters;
         private readonly WordRegisterCollection wordRegisters;
         private readonly DoubleWordRegisterCollection doubleWordRegisters;
-        private bool xosc32kReady;
-        private int xosc32kFreq;
+
+        private readonly Crystal OSCULP32K;
+        private readonly Crystal XOSC32K;
+        private bool xosc32kConnected = false;
+        private Saml22RTC rtc;
         private IFlagRegisterField xosc32kEnable;
         private IFlagRegisterField enable32Koutput;
         private IFlagRegisterField enable1KOutput;
 
         private void DefineRegisters()
         {
-
             doubleWordRegisters.AddRegister((long)Registers.InterruptEnableClear, IRQManager.GetInterruptEnableClearRegister<DoubleWordRegister>());
             doubleWordRegisters.AddRegister((long)Registers.InterruptEnableSet, IRQManager.GetInterruptEnableSetRegister<DoubleWordRegister>());
             doubleWordRegisters.AddRegister((long)Registers.InterruptFlagStatusandClear, IRQManager.GetRegister<DoubleWordRegister>(
-                writeCallback: (irq, oldValue, newValue) => {
-                    if(newValue) IRQManager.ClearInterrupt(irq);
-            }, valueProviderCallback: (irq, _) => IRQManager.IsSet(irq)));
+                writeCallback: (irq, oldValue, newValue) =>
+                {
+                    if (newValue) IRQManager.ClearInterrupt(irq);
+                }, valueProviderCallback: (irq, _) => IRQManager.IsSet(irq)));
 
             doubleWordRegisters.DefineRegister((long)Registers.Status)
-                .WithFlag(0, name: "XOSC32RDY", valueProviderCallback: (_) => xosc32kReady && xosc32kEnable.Value);
+                .WithFlag(0, name: "XOSC32RDY", valueProviderCallback: (_) => XOSC32K.Ready);
 
-            byteRegisters.DefineRegister((long)Registers.RTCClockSelectionControl);
+            byteRegisters.DefineRegister((long)Registers.RTCClockSelectionControl)
+                .WithValueField(0, 3, writeCallback:(_, value) => {
+                    switch(value)
+                    {
+                        case 0x0:
+                            // RTC.Frequency = ULP1K
+                            break;
+                        case 0x01:
+                            // RTC.Frequency = ULP32K;
+                            break;
+                        case 0x04:
+                            // RTC.Frequency = XOSC1K
+                            break;
+                        case 0x05:
+                            // RTC.Frequency = XOSC32K
+                            break;
+                        default:
+                            break;
+                    }
+                });
             byteRegisters.DefineRegister((long)Registers.SLCDClockSelectionControl);
             wordRegisters.DefineRegister((long)Registers.XOSC32KControl, 0x80)
                 .WithIgnoredBits(0, 1)
-                .WithFlag(1, out xosc32kEnable)
+                .WithFlag(1, writeCallback: (_, value) => XOSC32K.Enabled = value && xosc32kConnected, valueProviderCallback: (_) => XOSC32K.Enabled)
                 .WithTaggedFlag("XTALEN", 2)
                 .WithFlag(3, out enable32Koutput)
                 .WithFlag(4, out enable1KOutput)
                 .WithIgnoredBits(5, 1)
-                .WithFlag(6, name:"RUNSTDBY")
-                .WithFlag(7, name:"ONDEMAND")
+                .WithFlag(6, name: "RUNSTDBY")
+                .WithFlag(7, name: "ONDEMAND")
                 .WithValueField(8, 3, name: "STARTUP")
                 .WithIgnoredBits(11, 1)
                 .WithFlag(12, name: "WRTLOCK")
                 .WithIgnoredBits(13, 3);
-            
+
             byteRegisters.DefineRegister((long)Registers.ClockFailureDetectorControl);
             byteRegisters.DefineRegister((long)Registers.EventControl);
             doubleWordRegisters.DefineRegister((long)Registers.ULPInt32kControl); // Read from NVM calib
 
+        }
+
+        private sealed class Crystal
+        {
+
+            public bool Enabled
+            {
+                get => enabled;
+                set
+                {
+                    if (!enabled && value)
+                    {
+                        startUp.Enabled = true;
+                    }
+                }
+            }
+            public long Frequency
+            {
+                get
+                {
+                    if (enabled && nominalFrequency > 0)
+                        return nominalFrequency;
+                    return 0;
+                }
+            }
+
+            public bool Ready => ready;
+
+            public ulong StartUpTime
+            {
+                set
+                {
+                    startUp.Limit = value;
+                }
+            }
+
+            public void Reset()
+            {
+                enabled = enabledByDefault;
+                ready = false;
+            }
+
+            public Crystal(Saml22OSC32KCTRL osc32kctrl, long nominalFrequency, bool enabledByDefault = false)
+            {
+                this.osc32kctrl = osc32kctrl;
+                this.nominalFrequency = nominalFrequency;
+                this.enabledByDefault = enabledByDefault;
+                enabled = enabledByDefault;
+                startUp = new LimitTimer(this.osc32kctrl.machine.ClockSource,
+                    nominalFrequency, this.osc32kctrl,
+                    "Oscillator Startup", 32768,
+                    workMode: Time.WorkMode.OneShot, eventEnabled: true, direction:Time.Direction.Ascending);
+                startUp.LimitReached += StartUpTask;
+            }
+
+            private void StartUpTask()
+            {
+                ready = true;
+            }
+
+            private readonly Saml22OSC32KCTRL osc32kctrl;
+            private readonly LimitTimer startUp;
+            private readonly long nominalFrequency;
+            private readonly bool enabledByDefault;
+            private bool ready;
+            private bool enabled;
         }
 
         private enum Registers : long

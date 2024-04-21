@@ -6,4 +6,4 @@ pa:
 
 
 osc32kctrl:
-    XOSC32Frequency: 32768
+    UseXOSC32K: true
