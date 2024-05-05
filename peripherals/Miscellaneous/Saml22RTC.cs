@@ -16,7 +16,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public void Reset()
         {
             doubleWordRegisters.Reset();
+            wordRegisters.Reset();
             byteRegisters.Reset();
+            operatingMode.Value = OperatingMode.COUNT32;
+            enabled.Value = false;
         }
 
         public uint ReadDoubleWord(long offset) => doubleWordRegisters.Read(offset);
@@ -48,6 +51,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private readonly ByteRegisterCollection byteRegisters;
 
         private IEnumRegisterField<OperatingMode> operatingMode;
+        private IFlagRegisterField enabled;
+        private IFlagRegisterField csSync;
+        private IValueRegisterField prescaler;
 
         private void DefineRegisters()
         {
@@ -69,17 +75,25 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
             byteRegisters.DefineRegister((long)Registers.FrequencyCorrelation);
 
+            doubleWordRegisters.DefineRegister((long)Registers.GeneralPurpose0)
+                .WithTag("GP", 0, 32);
+            doubleWordRegisters.DefineRegister((long)Registers.GeneralPurpose1)
+                .WithTag("GPx", 0, 32);
+
             WordRegister CommonControlA = new WordRegister(this)
-                .WithTaggedFlag("SWRST", 0)
-                .WithTaggedFlag("ENABLE", 1)
+                .WithFlag(0, writeCallback: (oldValue, newValue) => {
+                    if(newValue)
+                        Reset();
+                })
+                .WithFlag(1, out enabled)
                 .WithEnumField(2, 2, out operatingMode)
-                .WithTag("PRESCALER", 8, 4)
+                .WithValueField(8, 4, out prescaler)
                 .WithIgnoredBits(12, 1)
                 .WithTaggedFlag("BKTRST", 13)
                 .WithTaggedFlag("GPTRST", 14)
-                .WithTaggedFlag("CSYNC", 15); // This bit is named in Count mode as 'COUNTSYNC' and in Clock as 'CLOCKSYNC'
+                .WithFlag(15, out csSync); // This bit is named in Count mode as 'COUNTSYNC' and in Clock as 'CLOCKSYNC'
 
-            DoubleWordRegister CommonSynchronizationBusy = new DoubleWordRegister(this);
+            // DoubleWordRegister CommonSynchronizationBusy = new DoubleWordRegister(this);
 
             // COUNT32 - Default
             // WordRegister count32ControlA = CommonControlA;
@@ -114,6 +128,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
             doubleWordRegisters.DefineConditionalRegister((long)Registers.EventControl, () => operatingMode.Value == OperatingMode.CLOCK);
 
+            doubleWordRegisters.DefineConditionalRegister((long)Registers.SynchronizationBusy, () => operatingMode.Value == OperatingMode.CLOCK);
+
             wordRegisters.AddConditionalRegister((long)Registers.InterruptEnableClear,
                 interruptsManager.GetInterruptEnableClearRegister<WordRegister>(),
                 () => operatingMode.Value == OperatingMode.CLOCK);
@@ -127,6 +143,26 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         interruptsManager.ClearInterrupt(irq);
                 }, valueProviderCallback: (irq, _) => interruptsManager.IsSet(irq)),
                 () => operatingMode.Value == OperatingMode.CLOCK);
+
+            doubleWordRegisters.DefineConditionalRegister((long)Registers.Counter_ClockValue, () => operatingMode.Value == OperatingMode.CLOCK)
+                .WithTag("SECOND", 0, 6)
+                .WithTag("MINUTE", 6, 6)
+                .WithTag("HOUR", 12, 5)
+                .WithTag("DAY", 17, 5)
+                .WithTag("MONTH", 22, 4)
+                .WithTag("YEAR", 26, 6);
+
+            doubleWordRegisters.DefineConditionalRegister((long)Registers.Compare_AlarmValue, () => operatingMode.Value == OperatingMode.CLOCK)
+                .WithTag("SECOND", 0, 6)
+                .WithTag("MINUTE", 6, 6)
+                .WithTag("HOUR", 12, 5)
+                .WithTag("DAY", 17, 5)
+                .WithTag("MONTH", 22, 4)
+                .WithTag("YEAR", 26, 6);
+
+            byteRegisters.DefineConditionalRegister((long)Registers.AlarmMask, () => operatingMode.Value == OperatingMode.CLOCK)
+                .WithTag("SEL", 0, 3);
+
         }
 
         private enum OperatingMode
