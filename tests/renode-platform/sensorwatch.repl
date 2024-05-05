@@ -7,3 +7,4 @@ pa:
 
 osc32kctrl:
     UseXOSC32K: true
+    RTC: rtc

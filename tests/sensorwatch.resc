@@ -23,10 +23,9 @@ machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
 
 sysbus LoadELF @build/watch.elf
 
-#sysbus LogPeripheralAccess sysbus.osc32kctrl true
+sysbus LogPeripheralAccess sysbus.rtc true
 # sysbus LogPeripheralAccess sysbus.supc true
 # sysbus LogAllPeripheralsAccess True
-sysbus Tag <0x4000100C 0x4> "OSCCTRL::Status" 0x00000111
 
 
 start

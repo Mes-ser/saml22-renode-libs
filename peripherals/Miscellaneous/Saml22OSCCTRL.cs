@@ -10,6 +10,18 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
     {
         public long Size => 0x400;
 
+        public long XOSCFrequency
+        {
+            get => xosc.Frequency;
+            set
+            {
+                if(xosc == null && value > 0)
+                    xosc = new Crystal(this, value);
+                if(xosc != null && value > 0)
+                    xosc.Frequency = value;
+            }
+        }
+
         public void Reset()
         {
             doubleWordRegisters.Reset();
@@ -23,12 +35,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public byte ReadByte(long offset) => byteRegisters.Read(offset);
         public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
 
-
-
         public Saml22OSCCTRL(Machine machine)
         {
             this.WarningLog("OSCCTRL is a stub. Does nothing.");
             this.machine = machine;
+
+            osc16m = new Crystal(this, 16_000_000);
 
             doubleWordRegisters = new DoubleWordRegisterCollection(this);
             wordRegisters = new WordRegisterCollection(this);
@@ -41,6 +53,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         }
 
         private readonly Machine machine;
+        private Crystal xosc;
+        private readonly Crystal dfll48m;
+        private readonly Crystal osc16m;
+        private readonly Crystal dpll96m;
         private readonly DoubleWordRegisterCollection doubleWordRegisters;
         private readonly WordRegisterCollection wordRegisters;
         private readonly ByteRegisterCollection byteRegisters;
@@ -63,10 +79,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 get
                 {
-                    if (enabled && nominalFrequency > 0)
-                        return nominalFrequency;
+                    if (enabled && actualFrequency > 0)
+                        return actualFrequency;
                     return 0;
                 }
+                set => actualFrequency = value;
             }
 
             public bool Ready => ready;
@@ -94,7 +111,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 startUp = new LimitTimer(this.saml22oscctrl.machine.ClockSource,
                     nominalFrequency, this.saml22oscctrl,
                     "Oscillator Startup", 32768,
-                    workMode: Time.WorkMode.OneShot, eventEnabled: true, direction:Time.Direction.Ascending);
+                    workMode: Time.WorkMode.OneShot, eventEnabled: true, direction: Time.Direction.Ascending);
                 startUp.LimitReached += StartUpTask;
             }
 
@@ -106,6 +123,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             private readonly Saml22OSCCTRL saml22oscctrl;
             private readonly LimitTimer startUp;
             private readonly long nominalFrequency;
+            private long actualFrequency;
             private readonly bool enabledByDefault;
             private bool ready;
             private bool enabled;
