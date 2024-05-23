@@ -3,13 +3,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Antmicro.Renode.Core;
-using Antmicro.Renode.Core.Structure;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
-using Antmicro.Renode.Peripherals.Bus;
-using Antmicro.Renode.PlatformDescription.Syntax;
 using Antmicro.Renode.Utilities;
-using Dynamitey.DynamicObjects;
 
 namespace Antmicro.Renode.Peripherals.GPIOPort
 {
@@ -55,6 +51,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
             DefineRegisters();
         }
+
 
         private const int NUMBER_OF_PINS = 32;
 
@@ -160,6 +157,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         writeCallback: (oldValue, newValue) => padOdd.PeripheralMultiplexer = newValue,
                         valueProviderCallback: (_) => padOdd.PeripheralMultiplexer
                     );
+                // byteRegisters.AddAfterWriteHook((long)Registers.PeripheralMultiplexingX + index, (_, value) => {
+                //     this.InfoLog($"E - 0x{padEven.PeripheralMultiplexer:x}| O - 0x{padOdd.PeripheralMultiplexer:x}");
+                // });
             }
 
             for(int index = 0; index < NUMBER_OF_PINS; index++)
@@ -170,18 +170,21 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         writeCallback: (oldValue, newValue) => pad.PeripheralMultiplexerEnable = newValue,
                         valueProviderCallback: (_) => pad.PeripheralMultiplexerEnable
                     )
-                    .WithFlag(1, name: "PMUXEN",
+                    .WithFlag(1, name: "INEN",
                         writeCallback: (oldValue, newValue) => pad.InputEnable = newValue,
                         valueProviderCallback: (_) => pad.InputEnable
                     )
-                    .WithFlag(2, name: "PMUXEN",
+                    .WithFlag(2, name: "PULLEN",
                         writeCallback: (oldValue, newValue) => pad.PullEnable = newValue,
                         valueProviderCallback: (_) => pad.PullEnable
                     )
-                    .WithFlag(6, name: "PMUXEN",
+                    .WithFlag(6, name: "DRVSTR",
                         writeCallback: (oldValue, newValue) => pad.OutputDriverStrength = newValue,
                         valueProviderCallback: (_) => pad.OutputDriverStrength
                     );
+                // byteRegisters.AddAfterWriteHook((long)Registers.PinConfigurationN + index, (_, value) => {
+                //     this.InfoLog($"{pad.PeripheralMultiplexerEnable}|{pad.InputEnable}|{pad.PullEnable}|{pad.OutputDriverStrength}|");
+                // });
             }
         }
 

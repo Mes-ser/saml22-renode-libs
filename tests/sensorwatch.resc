@@ -22,10 +22,12 @@ mach create
 machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
 
 sysbus LoadELF @build/watch.elf
+# sysbus LoadHEX @build/watch.hex
 
-sysbus LogPeripheralAccess sysbus.rtc true
-# sysbus LogPeripheralAccess sysbus.supc true
+    # sysbus LogPeripheralAccess sysbus.nvmctrl true
 # sysbus LogAllPeripheralsAccess True
 
+
+logLevel 0 sysbus.nvmctrl
 
 start

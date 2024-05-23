@@ -4,7 +4,7 @@ using Antmicro.Renode.Peripherals.Bus;
 
 namespace Antmicro.Renode.Peripherals.IRQControllers
 {
-    public class Saml22EIC : IDoubleWordPeripheral, IWordPeripheral, IBytePeripheral, IKnownSize
+    public class Saml22EIC : IDoubleWordPeripheral, IWordPeripheral, IBytePeripheral, IKnownSize, ILocalGPIOReceiver
     {
         public long Size => 0x400;
 
@@ -21,6 +21,11 @@ namespace Antmicro.Renode.Peripherals.IRQControllers
         public void WriteWord(long offset, ushort value) => wordRegisters.Write(offset, value);
         public byte ReadByte(long offset) => byteRegisters.Read(offset);
         public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
+
+        public IGPIOReceiver GetLocalReceiver(int index)
+        {
+            throw new System.NotImplementedException();
+        }
 
         public Saml22EIC(Machine machine)
         {
