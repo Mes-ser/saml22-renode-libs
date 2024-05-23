@@ -31,7 +31,10 @@ eic: IRQControllers.Saml22EIC @ sysbus 0x40002800
 
 usb: USB.Saml22USB @ sysbus 0x41000000
 
-nvmctrl: MemoryControllers.Saml22NVMCTRL @ sysbus 0x41004000
+nvmctrl: MemoryControllers.Saml22NVMCTRL @ {
+    sysbus 0x41004000;
+    sysbus new Bus.BusMultiRegistration { address: 0x40000; size: 0x1FFC0000; region: "Reserved Flash" }
+}
 
 tcc0: Timers.Saml22TCC @ sysbus 0x42001C00
 

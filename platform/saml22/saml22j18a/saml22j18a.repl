@@ -2,14 +2,12 @@ using "../saml22.repl"
 
 internalFlash: Memory.MappedMemory @ sysbus 0x00000000
     size: 0x40000
-reservedFlash: Memory.MappedMemory @ sysbus 0x40000
-    size: 0x3C0000
 
-rww: Memory.MappedMemory @ sysbus 0x400000
-    size: 0x2000
+// rww: Memory.ArrayMemory @ sysbus 0x400000
+//     size: 0x2000
 
-calibArea: Memory.ArrayMemory @ sysbus 0x00806020
-    size: 0x4
+// calibArea: Memory.ArrayMemory @ sysbus 0x00806020
+//     size: 0x4
 
 sram: Memory.MappedMemory @ sysbus 0x20000000
     size: 0x8000
