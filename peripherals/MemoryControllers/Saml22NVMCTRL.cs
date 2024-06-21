@@ -34,117 +34,55 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
 
         public byte ReadByte(long offset)
         {
-            switch (accessRegion)
-            {
-                case AccessRegion.CommandAndControl:
-                    return byteRegisters.Read(offset);
-                case AccessRegion.CalibAndAux:
-                    offset += BASE_ADDR_OFFSET - CALIB_AUX_BASE_ADDR;
-                    this.DebugLog($"CalibAux [Byte][Read] at [0x{offset:x}]");
-                    return 0x0;
-                case AccessRegion.RWWMemory:
-                    offset += BASE_ADDR_OFFSET - RWW_SECTOR_BASE_ADDR;
-                    this.DebugLog($"RWW [Byte][Read] at [0x{offset:x}]");
-                    return rwwMemory.ReadByte(offset);
-                default:
-                    return 0;
-            }
+            if(accessRegion == AccessRegion.Control)
+                return byteRegisters.Read(offset);
+
+            // Read from memory selected in "SetAbsoluteAddress()"
+            return 0x0;
         }
         public ushort ReadWord(long offset)
         {
-            switch (accessRegion)
-            {
-                case AccessRegion.CommandAndControl:
-                    return wordRegisters.Read(offset);
-                case AccessRegion.CalibAndAux:
-                    offset += BASE_ADDR_OFFSET - CALIB_AUX_BASE_ADDR;
-                    this.DebugLog($"CalibAux [Word][Read] at [0x{offset:x}]");
-                    return 0x0;
-                case AccessRegion.RWWMemory:
-                    offset += BASE_ADDR_OFFSET - RWW_SECTOR_BASE_ADDR;
-                    this.DebugLog($"RWW [Word][Read] at [0x{offset:x}]");
-                    return rwwMemory.ReadWord(offset);
-                default:
-                    return 0;
-            }
+            if(accessRegion == AccessRegion.Control)
+                return wordRegisters.Read(offset);
+
+            // Read from memory selected in "SetAbsoluteAddress()"
+            return 0x0;
         }
         public uint ReadDoubleWord(long offset)
         {
-            switch (accessRegion)
-            {
-                case AccessRegion.CommandAndControl:
-                    return doubleWordRegisters.Read(offset);
-                case AccessRegion.CalibAndAux:
-                    offset += BASE_ADDR_OFFSET - CALIB_AUX_BASE_ADDR;
-                    this.DebugLog($"CalibAux [DWord][Read] at [0x{offset:x}]");
-                    return 0x0;
-                case AccessRegion.RWWMemory:
-                    offset += BASE_ADDR_OFFSET - RWW_SECTOR_BASE_ADDR;
-                    this.DebugLog($"RWW [DWord][Read] at [0x{offset:x}]");
-                    return rwwMemory.ReadDoubleWord(offset);
-                default:
-                    return 0;
-            }
+
+            if(accessRegion == AccessRegion.Control)
+                return doubleWordRegisters.Read(offset);
+
+            // Read from memory selected in "SetAbsoluteAddress()"
+            return 0x0;
         }
         public void WriteByte(long offset, byte value)
         {
-            switch (accessRegion)
-            {
-                case AccessRegion.CommandAndControl:
-                    byteRegisters.Write(offset, value);
-                    break;
-                case AccessRegion.CalibAndAux:
-                    offset += BASE_ADDR_OFFSET - CALIB_AUX_BASE_ADDR;
-                    this.DebugLog($"CalibAux [Byte][Write] at [0x{offset:x}] - [0x{value:x}]");
-                    break;
-                case AccessRegion.RWWMemory:
-                    offset += BASE_ADDR_OFFSET - RWW_SECTOR_BASE_ADDR;
-                    rwwMemory.WriteByte(offset, value);
-                    this.DebugLog($"RWW [Byte][Write] at [0x{offset:x}] - [0x{value:x}]");
-                    break;
-                default:
-                    break;
+            if(accessRegion == AccessRegion.Control){
+                wordRegisters.Write(offset, value);
+                return;
             }
+            // Byte write to NVM is prohibited
+            interruptsManager.SetInterrupt(Interrupts.Error);
         }
         public void WriteWord(long offset, ushort value)
         {
-            switch (accessRegion)
+            if (accessRegion == AccessRegion.Control)
             {
-                case AccessRegion.CommandAndControl:
-                    wordRegisters.Write(offset, value);
-                    break;
-                case AccessRegion.CalibAndAux:
-                    offset += BASE_ADDR_OFFSET - CALIB_AUX_BASE_ADDR;
-                    this.DebugLog($"CalibAux [Word][Write] at [0x{offset:x}] - [0x{value:x}]");
-                    break;
-                case AccessRegion.RWWMemory:
-                    offset += BASE_ADDR_OFFSET - RWW_SECTOR_BASE_ADDR;
-                    rwwMemory.WriteWord(offset, value);
-                    this.DebugLog($"RWW [Word][Write] at [0x{offset:x}] - [0x{value:x}]");
-                    break;
-                default:
-                    break;
+                wordRegisters.Write(offset, value);
+                return;
             }
+            // Write to pageBuffer
         }
         public void WriteDoubleWord(long offset, uint value)
         {
-            switch (accessRegion)
+            if (accessRegion == AccessRegion.Control)
             {
-                case AccessRegion.CommandAndControl:
-                    doubleWordRegisters.Write(offset, value);
-                    break;
-                case AccessRegion.CalibAndAux:
-                    offset += BASE_ADDR_OFFSET - CALIB_AUX_BASE_ADDR;
-                    this.DebugLog($"CalibAux [DWord][Write] at [0x{offset:x}] - [0x{value:x}]");
-                    break;
-                case AccessRegion.RWWMemory:
-                    rwwMemory.WriteDoubleWord(offset, value);
-                    this.DebugLog($"RWW [DWord][Write] at [0x{offset:x}]:[0x{value:x}]");
-                    break;
-                default:
-                    break;
+                doubleWordRegisters.Write(offset, value);
+                return;
             }
-
+            // Write to pageBuffer
         }
 
         public Saml22NVMCTRL(Machine machine)
@@ -158,7 +96,8 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
             wordRegisters = new WordRegisterCollection(this);
             doubleWordRegisters = new DoubleWordRegisterCollection(this);
 
-            rwwMemory = new ArrayMemory(0x2000);
+            rwweeMemory = new ArrayMemory(0x2000);
+            auxiliaryMemory = new ArrayMemory(0xA100);
 
             DefineRegisters();
         }
@@ -173,9 +112,9 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         private readonly ByteRegisterCollection byteRegisters;
         private readonly WordRegisterCollection wordRegisters;
         private readonly DoubleWordRegisterCollection doubleWordRegisters;
-        private readonly ArrayMemory rwwMemory;
-        private IValueRegisterField address;
-        private bool isControlAccess;
+        private readonly ArrayMemory rwweeMemory;
+        private readonly ArrayMemory auxiliaryMemory;
+        private IValueRegisterField ADDR;
         private AccessRegion accessRegion;
 
         private void DefineRegisters()
@@ -198,47 +137,35 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
             }));
 
             wordRegisters.DefineRegister((long)Registers.Status); // SB determined by value in NV Memory
-                // .WithFlag(0, FieldMode.Read, name: "PRM")
-                // .WithFlag(1, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOAD")
-                // .WithFlag(2, FieldMode.Read | FieldMode.WriteOneToClear, name: "PROGE")
-                // .WithFlag(3, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOCKE")
-                // .WithFlag(4, FieldMode.Read | FieldMode.WriteOneToClear, name: "NVME")
-                // .WithIgnoredBits(5, 3)
-                // .WithFlag(8, FieldMode.Read, name: "SB")
-                // .WithIgnoredBits(9, 7);
+                                                                  // .WithFlag(0, FieldMode.Read, name: "PRM")
+                                                                  // .WithFlag(1, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOAD")
+                                                                  // .WithFlag(2, FieldMode.Read | FieldMode.WriteOneToClear, name: "PROGE")
+                                                                  // .WithFlag(3, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOCKE")
+                                                                  // .WithFlag(4, FieldMode.Read | FieldMode.WriteOneToClear, name: "NVME")
+                                                                  // .WithIgnoredBits(5, 3)
+                                                                  // .WithFlag(8, FieldMode.Read, name: "SB")
+                                                                  // .WithIgnoredBits(9, 7);
 
-            doubleWordRegisters.DefineRegister((long)Registers.Address);
-                // .WithValueField(0, 22, out address, name: "ADDR")
-                // .WithIgnoredBits(22, 10);
+            doubleWordRegisters.DefineRegister((long)Registers.Address)
+                .WithValueField(0, 16, out ADDR, name: "ADDR")
+                .WithIgnoredBits(22, 10);
 
             wordRegisters.DefineRegister((long)Registers.LockSection); // Reset value determined by NV memory user row
         }
 
         public void SetAbsoluteAddress(ulong address)
         {
-
+            accessRegion = AccessRegion.Memory;
             if ((address & APB_BRIDGE_PBASE_ADDR) == APB_BRIDGE_PBASE_ADDR)
-            {
-                accessRegion = AccessRegion.CommandAndControl;
-                return;
-            }
-            if ((address & CALIB_AUX_BASE_ADDR) == CALIB_AUX_BASE_ADDR)
-            {
-                accessRegion = AccessRegion.CalibAndAux;
-                return;
-            }
-            if ((address & RWW_SECTOR_BASE_ADDR) == RWW_SECTOR_BASE_ADDR)
-            {
-                accessRegion = AccessRegion.RWWMemory;
-                return;
-            }
+                accessRegion = AccessRegion.Control;
+
+            ADDR.Value = (address & 0x1FFFF) >> 1;
         }
 
         private enum AccessRegion
         {
-            CommandAndControl = 0,
-            CalibAndAux = 1,
-            RWWMemory = 2,
+            Memory = 0,
+            Control = 1
         }
 
         private enum Registers : long

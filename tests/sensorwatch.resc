@@ -27,6 +27,7 @@ sysbus LoadELF @build/watch.elf
     # sysbus LogPeripheralAccess sysbus.nvmctrl true
 # sysbus LogAllPeripheralsAccess True
 
+logLevel 3
 
 logLevel 0 sysbus.nvmctrl
 

@@ -46,9 +46,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             wordRegisters = new WordRegisterCollection(this);
             byteRegisters = new ByteRegisterCollection(this);
 
-
-
-
             doubleWordRegisters.DefineRegister((long)Registers.Status, 0x111); // TODO: temporary solution
         }
 
