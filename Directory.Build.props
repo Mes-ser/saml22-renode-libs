@@ -34,9 +34,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Reference Include="AdvancedLoggerViewerPlugin">
+        <!-- <Reference Include="AdvancedLoggerViewerPlugin">
             <HintPath>$(RenodePath)/AdvancedLoggerViewerPlugin.dll</HintPath>
-        </Reference>
+        </Reference> -->
         <Reference Include="AntShell">
             <HintPath>$(RenodePath)/AntShell.dll</HintPath>
         </Reference>
