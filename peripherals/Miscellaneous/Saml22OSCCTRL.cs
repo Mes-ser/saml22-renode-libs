@@ -3,12 +3,16 @@ using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Peripherals.Timers;
+using Antmicro.Renode.Utilities;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class Saml22OSCCTRL : IDoubleWordPeripheral, IWordPeripheral, IBytePeripheral, IKnownSize
     {
         public long Size => 0x400;
+
+        [IrqProvider]
+        public GPIO IRQ { get; } = new GPIO();
 
         public long XOSCFrequency
         {
@@ -40,16 +44,19 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.WarningLog("OSCCTRL is a stub. Does nothing.");
             this.machine = machine;
 
+            interruptManager = new InterruptManager<Interrupts>(this);
+
             osc16m = new Crystal(this, 16_000_000);
 
             doubleWordRegisters = new DoubleWordRegisterCollection(this);
             wordRegisters = new WordRegisterCollection(this);
             byteRegisters = new ByteRegisterCollection(this);
 
-            doubleWordRegisters.DefineRegister((long)Registers.Status, 0x111); // TODO: temporary solution
+            doubleWordRegisters.DefineRegister((long)Registers.STATUS, 0x111); // TODO: temporary solution
         }
 
         private readonly Machine machine;
+        private readonly InterruptManager<Interrupts> interruptManager;
         private Crystal xosc;
         private readonly Crystal dfll48m;
         private readonly Crystal osc16m;
@@ -126,26 +133,43 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             private bool enabled;
         }
 
+        private enum Interrupts
+        {
+            XOSCRDY = 0,
+            XOSCFAIL = 1,
+            OSC16MRDY = 4,
+            DFLLRDY = 8,
+            DFLLOOB = 9,
+            DFLLLCKF = 10,
+            DFLLLCKC = 11,
+            DFLLRCS = 12,
+            DPLLLCKR = 16,
+            DPLLLCKF = 17,
+            DPLLLTO = 18,
+            DPLLLDRTO = 19
+
+        }
+
         private enum Registers : long
         {
-            InterruptEnableClear = 0x00,
-            InterruptEnableSet = 0x04,
-            InterruptFlagStatusandClear = 0x08,
-            Status = 0x0C,
-            ClockFailureDetectorPrescaler = 0x12,
-            EventControl = 0x13,
-            InternalOscillatorOSC16MControl = 0x14,
-            // ExternalMultipurposeCrystalOscillatorXOSCControl =
-            DFLL48MControl = 0x18,
-            DFLL48Value = 0x1C,
-            DFLL48MMultiplier = 0x20,
-            DFLL48MSynchronization = 0x24,
-            DPLLControlA = 0x28,
-            DPLLRatioControl = 0x2C,
-            DPLLControlB = 0x30,
-            DPLLPrescaler = 0x34,
-            DPLLSynchronizationBusy = 0x38,
-            DPLLStatus = 0x3C
+            INTENCLR = 0x00,
+            INTENSET = 0x04,
+            INTFLAG = 0x08,
+            STATUS = 0x0C,
+            XOSCCTRL = 0x10,
+            CFDPRESC = 0x12,
+            EVCTRL = 0x13,
+            OSC16MCTRL = 0x14,
+            DFLLCRL = 0x18,
+            DFLLVAL = 0x1C,
+            DFLLMUL = 0x20,
+            DFLLSYNC = 0x24,
+            DPLLCTRLA = 0x28,
+            DPLLRATIO = 0x2C,
+            DPLLCTRLB = 0x30,
+            DPLLPRESC = 0x34,
+            DPLLSYNCBUSY = 0x38,
+            DPLLSTATUS = 0x3C
         }
     }
 }

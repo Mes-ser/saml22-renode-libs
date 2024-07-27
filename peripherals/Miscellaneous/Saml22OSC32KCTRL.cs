@@ -1,5 +1,3 @@
-
-using System.Collections;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.Bus;
@@ -18,11 +16,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             get => xosc32kConnected;
             set => xosc32kConnected = value;
-        }
-        public Saml22RTC RTC
-        {
-            get => rtc;
-            set => rtc = value;
         }
 
         public byte ReadByte(long offset) => byteRegisters.Read(offset);
@@ -66,7 +59,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private readonly Crystal OSCULP32K;
         private readonly Crystal XOSC32K;
         private bool xosc32kConnected = false;
-        private Saml22RTC rtc;
+        private IHasFrequency rtc => (IHasFrequency)machine.SystemBus.WhatPeripheralIsAt((ulong)Saml22MemoryMap.RTCBaseAddress);
         private IFlagRegisterField xosc32kEnable;
         private IFlagRegisterField enable32Koutput;
         private IFlagRegisterField enable1KOutput;
@@ -89,16 +82,16 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     switch(value)
                     {
                         case 0x0:
-                            // RTC.Frequency = ULP1K
+                            // rtc.Frequency = ULP1K
                             break;
                         case 0x01:
-                            // RTC.Frequency = ULP32K;
+                            // rtc.Frequency = ULP32K;
                             break;
                         case 0x04:
-                            // RTC.Frequency = XOSC1K
+                            // rtc.Frequency = XOSC1K
                             break;
                         case 0x05:
-                            // RTC.Frequency = XOSC32K
+                            // rtc.Frequency = XOSC32K
                             break;
                         default:
                             break;

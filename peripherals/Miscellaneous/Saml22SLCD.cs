@@ -5,11 +5,14 @@ using Antmicro.Renode.Utilities;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    public class Saml22SLCD : IDoubleWordPeripheral, IWordPeripheral, IBytePeripheral, IKnownSize
+    public class Saml22SLCD : IDoubleWordPeripheral, IWordPeripheral, IBytePeripheral, IKnownSize, IHasFrequency
     {
         public long Size => 0x400;
         [IrqProvider]
         public GPIO IRQ { get; } = new GPIO();
+        public long Frequency { get => freuency; set => freuency = value; }
+
+        private long freuency;
 
         public void Reset()
         {

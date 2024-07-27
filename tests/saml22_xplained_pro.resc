@@ -1,4 +1,3 @@
-
 ### INCLUDES ###
 include @peripherals/Saml22MemoryMap.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Saml22MemoryMap"
@@ -20,17 +19,9 @@ include @peripherals/GPIOPort/Saml22PortGroup.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.Saml22PortGroup"
 include @peripherals/GPIOPort/Saml22Port.cs
 
-mach create
-machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
+mach create "saml22-xplained-pro"
+machine LoadPlatformDescription $ORIGIN\renode-platform\saml22_xplained_pro.repl
 
-sysbus LoadELF @build/watch.elf
+sysbus LoadELF @saml22a/build/Demo.elf
 
-macro reset
-"""
-    sysbus.cpu SP 0x200037F0
-    sysbus.cpu PC 0x3A65
-"""
 
-sysbus LogPeripheralAccess sysbus.pm true
-
-start

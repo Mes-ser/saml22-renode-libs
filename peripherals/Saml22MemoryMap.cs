@@ -2,7 +2,7 @@
 
 namespace Antmicro.Renode.Peripherals
 {
-    public enum Saml22MemoryMappin
+    public enum Saml22MemoryMap
     {
         FlashBaseAddress = 0x0,
         SRAMBaseAddress = 0x2000000,
