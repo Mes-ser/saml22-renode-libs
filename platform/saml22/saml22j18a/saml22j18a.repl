@@ -1,6 +1,6 @@
 using "../saml22.repl"
 
-internalFlash: Memory.MappedMemory @ sysbus 0x00000000
+flash: Memory.MappedMemory @ sysbus 0x00000000
     size: 0x40000
 
 // rww: Memory.ArrayMemory @ sysbus 0x400000
@@ -13,4 +13,3 @@ sram: Memory.MappedMemory @ sysbus 0x20000000
     size: 0x8000
 
 pc: GPIOPort.Saml22PortGroup @ port 2
-pf: GPIOPort.Saml22PortGroup @ port 3
