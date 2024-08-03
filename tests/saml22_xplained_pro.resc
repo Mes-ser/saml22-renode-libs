@@ -20,8 +20,8 @@ EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.Saml22PortGroup"
 include @peripherals/GPIOPort/Saml22Port.cs
 
 mach create "saml22-xplained-pro"
-machine LoadPlatformDescription $ORIGIN\renode-platform\saml22_xplained_pro.repl
+machine LoadPlatformDescription $ORIGIN/renode-platform/saml22_xplained_pro.repl
 
-sysbus LoadELF @saml22a/build/Demo.elf
+sysbus LoadELF $CWD/../saml22-base-project/app/firmware.elf
 
-
+machine StartGdbServer 3334

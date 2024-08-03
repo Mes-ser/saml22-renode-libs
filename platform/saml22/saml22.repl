@@ -6,7 +6,7 @@ cpu: CPU.CortexM @ sysbus
 
 
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
-    systickFrequency: 32768
+    systickFrequency: 8000000
     priorityMask: 0xC0
     IRQ -> cpu@0
 

@@ -11,3 +11,6 @@ internalFlash: Memory.MappedMemory @ sysbus 0x00000000
 
 sram: Memory.MappedMemory @ sysbus 0x20000000
     size: 0x8000
+
+pc: GPIOPort.Saml22PortGroup @ port 2
+pf: GPIOPort.Saml22PortGroup @ port 3
