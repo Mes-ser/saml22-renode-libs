@@ -39,6 +39,13 @@ tcc0: Timers.Saml22TCC @ sysbus 0x42001C00
 
 slcd: Miscellaneous.Saml22SLCD @ sysbus 0x42003C00
 
+sercom0: Miscellaneous.Saml22SERCOM @ sysbus 0x42000400
+sercom1: Miscellaneous.Saml22SERCOM @ sysbus 0x42000800
+sercom2: Miscellaneous.Saml22SERCOM @ sysbus 0x42000C00
+sercom3: Miscellaneous.Saml22SERCOM @ sysbus 0x42001000
+sercom4: Miscellaneous.Saml22SERCOM @ sysbus 0x42001400
+sercom5: Miscellaneous.Saml22SERCOM @ sysbus 0x42001800
+
 
 port: GPIOPort.Saml22Port @ {
         sysbus 0x41006000;

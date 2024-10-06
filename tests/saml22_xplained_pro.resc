@@ -19,6 +19,9 @@ include @peripherals/GPIOPort/Saml22PortGroup.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.Saml22PortGroup"
 include @peripherals/GPIOPort/Saml22Port.cs
 
+include @peripherals/Miscellaneous/Saml22SERCOM.cs
+include @peripherals/Mocks/DriverTest.cs
+
 mach create "saml22-xplained-pro"
 machine LoadPlatformDescription $ORIGIN/renode-platform/saml22_xplained_pro.repl
 
