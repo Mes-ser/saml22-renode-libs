@@ -1,0 +1,11 @@
+{
+    "[csharp]": {
+        "editor.rulers": [
+            130
+        ]
+    },
+    "files.associations": {
+        "*.resc": "shellscript",
+        "*.repl": "csharp"
+    },
+}
