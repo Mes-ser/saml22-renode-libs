@@ -42,9 +42,9 @@ namespace Antmicro.Renode.Peripherals
         TC3BaseAddress = 0x42002C00,
         ADCBaseAddress = 0x42003000,
         PTCBaseAddress = 0x42003800,
-        SLCDBaseAddress = 0x42004000,
+        SLCDBaseAddress = 0x42003C00,
         AESBaseAddress = 0x42004000,
         TRNGBaseAddress = 0x42004400,
-        CCLBaseAddress = 0x42004400
+        CCLBaseAddress = 0x42004800
     }
 }
