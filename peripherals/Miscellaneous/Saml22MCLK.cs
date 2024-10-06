@@ -1,4 +1,4 @@
-using Antmicro.Renode.Core;
+﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
@@ -11,27 +11,27 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public void Reset()
         {
-            doubleWordRegisters.Reset();
-            byteRegisters.Reset();
+            _doubleWordRegisters.Reset();
+            _byteRegisters.Reset();
         }
 
-        public uint ReadDoubleWord(long offset) => doubleWordRegisters.Read(offset);
-        public void WriteDoubleWord(long offset, uint value) => doubleWordRegisters.Write(offset, value);
-        public byte ReadByte(long offset) => byteRegisters.Read(offset);
-        public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
+        public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
+        public void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
+        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
         public Saml22MCLK(Machine machine)
         {
             this.WarningLog("MCLK is a stub. Does nothing.");
-            this.machine = machine;
+            _machine = machine;
 
-            doubleWordRegisters = new DoubleWordRegisterCollection(this);
-            byteRegisters = new ByteRegisterCollection(this);
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
         }
 
-        private readonly Machine machine;
-        private readonly DoubleWordRegisterCollection doubleWordRegisters;
-        private readonly ByteRegisterCollection byteRegisters;
+        private readonly Machine _machine;
+        private readonly DoubleWordRegisterCollection _doubleWordRegisters;
+        private readonly ByteRegisterCollection _byteRegisters;
 
 
         private enum Registers : long
@@ -42,7 +42,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             CPUClockDivision = 0x04,
             BackupClockDivision = 0x06,
             AHBMask = 0x10,
-            APBAMask =0x14,
+            APBAMask = 0x14,
             APBBMask = 0x18,
             APBCMask = 0x1C
         }

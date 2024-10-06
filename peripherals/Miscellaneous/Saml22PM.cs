@@ -1,4 +1,4 @@
-
+﻿
 
 
 using Antmicro.Renode.Core;
@@ -18,63 +18,63 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public void Reset()
         {
-            byteRegisters.Reset();
-            wordRegisters.Reset();
+            _byteRegisters.Reset();
+            _wordRegisters.Reset();
         }
 
         public Saml22PM(Machine machine)
         {
             this.WarningLog("PM not implemented at all. It's just a stub.");
 
-            this.machine = machine;
+            _machine = machine;
 
-            IRQManager = new InterruptManager<Interrupts>(this);
+            _intManager = new InterruptManager<Interrupts>(this);
 
-            byteRegisters = new ByteRegisterCollection(this);
-            wordRegisters = new WordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
+            _wordRegisters = new WordRegisterCollection(this);
 
             DefineRegisters();
 
         }
 
-        private readonly Machine machine;
-        private readonly InterruptManager<Interrupts> IRQManager;
-        private readonly ByteRegisterCollection byteRegisters;
-        private readonly WordRegisterCollection wordRegisters;
+        private readonly Machine _machine;
+        private readonly InterruptManager<Interrupts> _intManager;
+        private readonly ByteRegisterCollection _byteRegisters;
+        private readonly WordRegisterCollection _wordRegisters;
 
         // Registers Fields
-        private IEnumRegisterField<SleepMode> SLEEPMODE;
+        private IEnumRegisterField<SleepMode> _sleepMode;
 
-        public byte ReadByte(long offset) => byteRegisters.Read(offset);
-        public ushort ReadWord(long offset) => wordRegisters.Read(offset);
-        public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
-        public void WriteWord(long offset, ushort value) => wordRegisters.Write(offset, value);
+        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public ushort ReadWord(long offset) => _wordRegisters.Read(offset);
+        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
+        public void WriteWord(long offset, ushort value) => _wordRegisters.Write(offset, value);
 
         private void DefineRegisters()
         {
-            byteRegisters.DefineRegister((long)Registers.ControlA);
-            byteRegisters.DefineRegister((long)Registers.SleepConfiguration, 0x02)
-                .WithEnumField(0, 3, out SLEEPMODE)
+            _byteRegisters.DefineRegister((long)Registers.ControlA);
+            _byteRegisters.DefineRegister((long)Registers.SleepConfiguration, 0x02)
+                .WithEnumField(0, 3, out _sleepMode)
                 .WithIgnoredBits(3, 5);
 
-            byteRegisters.DefineRegister((long)Registers.PerformanceLevelConfiguration)
+            _byteRegisters.DefineRegister((long)Registers.PerformanceLevelConfiguration)
                 .WithValueField(0, 2, writeCallback: (_, value) =>
                 {
-                    IRQManager.SetInterrupt(Interrupts.PerformanceLevelInterruptEnable);
+                    _intManager.SetInterrupt(Interrupts.PerformanceLevelInterruptEnable);
                 });
 
-            byteRegisters.AddRegister((long)Registers.InterruptEnableClear, IRQManager.GetInterruptEnableClearRegister<ByteRegister>());
-            byteRegisters.AddRegister((long)Registers.InterruptEnableSet, IRQManager.GetInterruptEnableSetRegister<ByteRegister>());
-            byteRegisters.AddRegister((long)Registers.InterruptFlagStatusandClear, IRQManager.GetRegister<ByteRegister>(writeCallback: (irq, oldValue, newValue) =>
+            _byteRegisters.AddRegister((long)Registers.InterruptEnableClear, _intManager.GetInterruptEnableClearRegister<ByteRegister>());
+            _byteRegisters.AddRegister((long)Registers.InterruptEnableSet, _intManager.GetInterruptEnableSetRegister<ByteRegister>());
+            _byteRegisters.AddRegister((long)Registers.InterruptFlagStatusandClear, _intManager.GetRegister<ByteRegister>(writeCallback: (irq, oldValue, newValue) =>
             {
                 if (newValue)
-                    IRQManager.ClearInterrupt(irq);
+                    _intManager.ClearInterrupt(irq);
             }, valueProviderCallback: (irq, _) =>
             {
-                return IRQManager.IsSet(irq);
+                return _intManager.IsSet(irq);
             }).WithIgnoredBits(1, 7));
 
-            wordRegisters.DefineRegister((long)Registers.StandbyConfiguration, 0x0400);
+            _wordRegisters.DefineRegister((long)Registers.StandbyConfiguration, 0x0400);
         }
 
         private enum SleepMode

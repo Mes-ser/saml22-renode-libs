@@ -1,4 +1,4 @@
-using Antmicro.Renode.Core;
+﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Peripherals.Timers;
@@ -12,74 +12,71 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         [IrqProvider]
         public GPIO IRQ { get; } = new GPIO();
-        public bool UseXOSC32K
-        {
-            get => xosc32kConnected;
-            set => xosc32kConnected = value;
-        }
+        public bool UseXOSC32K { get; set; } = false;
 
-        public byte ReadByte(long offset) => byteRegisters.Read(offset);
-        public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
-        public ushort ReadWord(long offset) => wordRegisters.Read(offset);
-        public void WriteWord(long offset, ushort value) => wordRegisters.Write(offset, value);
-        public uint ReadDoubleWord(long offset) => doubleWordRegisters.Read(offset);
-        public void WriteDoubleWord(long offset, uint value) => doubleWordRegisters.Write(offset, value);
+        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
+        public ushort ReadWord(long offset) => _wordRegisters.Read(offset);
+        public void WriteWord(long offset, ushort value) => _wordRegisters.Write(offset, value);
+        public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
+        public void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
 
         public void Reset()
         {
-            byteRegisters.Reset();
-            wordRegisters.Reset();
-            doubleWordRegisters.Reset();
-            OSCULP32K.Reset();
-            XOSC32K.Reset();
+            _byteRegisters.Reset();
+            _wordRegisters.Reset();
+            _doubleWordRegisters.Reset();
+            _osculp32k.Reset();
+            _xosc32k.Reset();
         }
 
         public Saml22OSC32KCTRL(Machine machine)
         {
-            this.machine = machine;
-            IRQManager = new InterruptManager<Interrupts>(this);
+            _machine = machine;
+            _interruptsManager = new InterruptManager<Interrupts>(this);
 
-            OSCULP32K = new Crystal(this, 32768, true);
-            XOSC32K = new Crystal(this, 32768);
+            _osculp32k = new Crystal(this, 32768, true);
+            _xosc32k = new Crystal(this, 32768);
 
-            byteRegisters = new ByteRegisterCollection(this);
-            wordRegisters = new WordRegisterCollection(this);
-            doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
+            _wordRegisters = new WordRegisterCollection(this);
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
 
             DefineRegisters();
         }
 
-        private readonly Machine machine;
-        private readonly InterruptManager<Interrupts> IRQManager;
+        private readonly Machine _machine;
+        private readonly InterruptManager<Interrupts> _interruptsManager;
 
-        private readonly ByteRegisterCollection byteRegisters;
-        private readonly WordRegisterCollection wordRegisters;
-        private readonly DoubleWordRegisterCollection doubleWordRegisters;
+        private readonly ByteRegisterCollection _byteRegisters;
+        private readonly WordRegisterCollection _wordRegisters;
+        private readonly DoubleWordRegisterCollection _doubleWordRegisters;
 
-        private readonly Crystal OSCULP32K;
-        private readonly Crystal XOSC32K;
-        private bool xosc32kConnected = false;
-        private IHasFrequency rtc => (IHasFrequency)machine.SystemBus.WhatPeripheralIsAt((ulong)Saml22MemoryMap.RTCBaseAddress);
-        private IFlagRegisterField xosc32kEnable;
-        private IFlagRegisterField enable32Koutput;
-        private IFlagRegisterField enable1KOutput;
+        private readonly Crystal _osculp32k;
+        private readonly Crystal _xosc32k;
+
+        private IHasFrequency RTC => (IHasFrequency)_machine.SystemBus.WhatPeripheralIsAt((ulong)Saml22MemoryMap.RTCBaseAddress);
+        private IFlagRegisterField _xosc32kEnable;
+        private IFlagRegisterField _enable32Koutput;
+        private IFlagRegisterField _enable1KOutput;
 
         private void DefineRegisters()
         {
-            doubleWordRegisters.AddRegister((long)Registers.InterruptEnableClear, IRQManager.GetInterruptEnableClearRegister<DoubleWordRegister>());
-            doubleWordRegisters.AddRegister((long)Registers.InterruptEnableSet, IRQManager.GetInterruptEnableSetRegister<DoubleWordRegister>());
-            doubleWordRegisters.AddRegister((long)Registers.InterruptFlagStatusandClear, IRQManager.GetRegister<DoubleWordRegister>(
+            _doubleWordRegisters.AddRegister((long)Registers.InterruptEnableClear, _interruptsManager.GetInterruptEnableClearRegister<DoubleWordRegister>());
+            _doubleWordRegisters.AddRegister((long)Registers.InterruptEnableSet, _interruptsManager.GetInterruptEnableSetRegister<DoubleWordRegister>());
+            _doubleWordRegisters.AddRegister((long)Registers.InterruptFlagStatusandClear, _interruptsManager.GetRegister<DoubleWordRegister>(
                 writeCallback: (irq, oldValue, newValue) =>
                 {
-                    if (newValue) IRQManager.ClearInterrupt(irq);
-                }, valueProviderCallback: (irq, _) => IRQManager.IsSet(irq)));
+                    if (newValue) _interruptsManager.ClearInterrupt(irq);
+                }, valueProviderCallback: (irq, _) => _interruptsManager.IsSet(irq)));
 
-            doubleWordRegisters.DefineRegister((long)Registers.Status)
-                .WithFlag(0, name: "XOSC32RDY", valueProviderCallback: (_) => XOSC32K.Ready);
+            _doubleWordRegisters.DefineRegister((long)Registers.Status)
+                .WithFlag(0, name: "XOSC32RDY", valueProviderCallback: (_) => _xosc32k.Ready);
 
-            byteRegisters.DefineRegister((long)Registers.RTCClockSelectionControl)
-                .WithValueField(0, 3, writeCallback:(_, value) => {
-                    switch(value)
+            _byteRegisters.DefineRegister((long)Registers.RTCClockSelectionControl)
+                .WithValueField(0, 3, writeCallback: (_, value) =>
+                {
+                    switch (value)
                     {
                         case 0x0:
                             // rtc.Frequency = ULP1K
@@ -97,13 +94,13 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             break;
                     }
                 });
-            byteRegisters.DefineRegister((long)Registers.SLCDClockSelectionControl);
-            wordRegisters.DefineRegister((long)Registers.XOSC32KControl, 0x80)
+            _byteRegisters.DefineRegister((long)Registers.SLCDClockSelectionControl);
+            _wordRegisters.DefineRegister((long)Registers.XOSC32KControl, 0x80)
                 .WithIgnoredBits(0, 1)
-                .WithFlag(1, writeCallback: (_, value) => XOSC32K.Enabled = value && xosc32kConnected, valueProviderCallback: (_) => XOSC32K.Enabled)
+                .WithFlag(1, writeCallback: (_, value) => _xosc32k.Enabled = value && UseXOSC32K, valueProviderCallback: (_) => _xosc32k.Enabled)
                 .WithTaggedFlag("XTALEN", 2)
-                .WithFlag(3, out enable32Koutput)
-                .WithFlag(4, out enable1KOutput)
+                .WithFlag(3, out _enable32Koutput)
+                .WithFlag(4, out _enable1KOutput)
                 .WithIgnoredBits(5, 1)
                 .WithFlag(6, name: "RUNSTDBY")
                 .WithFlag(7, name: "ONDEMAND")
@@ -112,9 +109,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithFlag(12, name: "WRTLOCK")
                 .WithIgnoredBits(13, 3);
 
-            byteRegisters.DefineRegister((long)Registers.ClockFailureDetectorControl);
-            byteRegisters.DefineRegister((long)Registers.EventControl);
-            doubleWordRegisters.DefineRegister((long)Registers.ULPInt32kControl); // Read from NVM calib
+            _byteRegisters.DefineRegister((long)Registers.ClockFailureDetectorControl);
+            _byteRegisters.DefineRegister((long)Registers.EventControl);
+            _doubleWordRegisters.DefineRegister((long)Registers.ULPInt32kControl); // Read from NVM calib
 
         }
 
@@ -123,12 +120,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
             public bool Enabled
             {
-                get => enabled;
+                get => _enabled;
                 set
                 {
-                    if (!enabled && value)
+                    if (!_enabled && value)
                     {
-                        startUp.Enabled = true;
+                        _startUp.Enabled = true;
                     }
                 }
             }
@@ -136,52 +133,51 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 get
                 {
-                    if (enabled && nominalFrequency > 0)
-                        return nominalFrequency;
+                    if (_enabled && _nominalFrequency > 0)
+                        return _nominalFrequency;
                     return 0;
                 }
             }
 
-            public bool Ready => ready;
+            public bool Ready { get; private set; }
 
             public ulong StartUpTime
             {
                 set
                 {
-                    startUp.Limit = value;
+                    _startUp.Limit = value;
                 }
             }
 
             public void Reset()
             {
-                enabled = enabledByDefault;
-                ready = false;
+                _enabled = _enabledByDefault;
+                Ready = false;
             }
 
             public Crystal(Saml22OSC32KCTRL osc32kctrl, long nominalFrequency, bool enabledByDefault = false)
             {
-                this.osc32kctrl = osc32kctrl;
-                this.nominalFrequency = nominalFrequency;
-                this.enabledByDefault = enabledByDefault;
-                enabled = enabledByDefault;
-                startUp = new LimitTimer(this.osc32kctrl.machine.ClockSource,
-                    nominalFrequency, this.osc32kctrl,
+                _osc32kctrl = osc32kctrl;
+                _nominalFrequency = nominalFrequency;
+                _enabledByDefault = enabledByDefault;
+                _enabled = enabledByDefault;
+                _startUp = new LimitTimer(_osc32kctrl._machine.ClockSource,
+                    nominalFrequency, _osc32kctrl,
                     "Oscillator Startup", 32768,
-                    workMode: Time.WorkMode.OneShot, eventEnabled: true, direction:Time.Direction.Ascending);
-                startUp.LimitReached += StartUpTask;
+                    workMode: Time.WorkMode.OneShot, eventEnabled: true, direction: Time.Direction.Ascending);
+                _startUp.LimitReached += StartUpTask;
             }
 
             private void StartUpTask()
             {
-                ready = true;
+                Ready = true;
             }
 
-            private readonly Saml22OSC32KCTRL osc32kctrl;
-            private readonly LimitTimer startUp;
-            private readonly long nominalFrequency;
-            private readonly bool enabledByDefault;
-            private bool ready;
-            private bool enabled;
+            private readonly Saml22OSC32KCTRL _osc32kctrl;
+            private readonly LimitTimer _startUp;
+            private readonly long _nominalFrequency;
+            private readonly bool _enabledByDefault;
+            private bool _enabled;
         }
 
         private enum Registers : long

@@ -1,4 +1,4 @@
-using Antmicro.Renode.Core;
+﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
@@ -13,40 +13,39 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         [IrqProvider]
         public GPIO IRQ { get; } = new GPIO();
 
-        public DoubleWordRegisterCollection RegistersCollection => registers;
+        public DoubleWordRegisterCollection RegistersCollection { get; }
 
         public void Reset()
         {
-            registers.Reset();
+            RegistersCollection.Reset();
         }
 
-        public uint ReadDoubleWord(long offset) => registers.Read(offset);
-        public void WriteDoubleWord(long offset, uint value) => registers.Write(offset, value);
+        public uint ReadDoubleWord(long offset) => RegistersCollection.Read(offset);
+        public void WriteDoubleWord(long offset, uint value) => RegistersCollection.Write(offset, value);
 
         public Saml22SUPC(Machine machine)
         {
             this.WarningLog("SUPC is a stub. Does nothing.");
-            this.machine = machine;
+            _machine = machine;
 
-            IRQManager = new InterruptManager<Interrupts>(this);
+            _interruptsManager = new InterruptManager<Interrupts>(this);
 
-            registers = new DoubleWordRegisterCollection(this);
+            RegistersCollection = new DoubleWordRegisterCollection(this);
 
-            registers.AddRegister((long)Registers.InterruptEnableClear, IRQManager.GetInterruptEnableClearRegister<DoubleWordRegister>());
-            registers.AddRegister((long)Registers.InterruptEnableSet, IRQManager.GetInterruptEnableSetRegister<DoubleWordRegister>());
-            registers.AddRegister((long)Registers.InterruptFlagStatusandClear, IRQManager.GetRegister<DoubleWordRegister>(
-                writeCallback: (irq, oldValue, newValue) => {
-                    if(newValue)
-                        IRQManager.ClearInterrupt(irq);
-            }));
-            registers.DefineRegister((long)Registers.Status, 0x705); // Temporary solution
+            RegistersCollection.AddRegister((long)Registers.InterruptEnableClear, _interruptsManager.GetInterruptEnableClearRegister<DoubleWordRegister>());
+            RegistersCollection.AddRegister((long)Registers.InterruptEnableSet, _interruptsManager.GetInterruptEnableSetRegister<DoubleWordRegister>());
+            RegistersCollection.AddRegister((long)Registers.InterruptFlagStatusandClear, _interruptsManager.GetRegister<DoubleWordRegister>(
+                writeCallback: (irq, oldValue, newValue) =>
+                {
+                    if (newValue)
+                        _interruptsManager.ClearInterrupt(irq);
+                }));
+            RegistersCollection.DefineRegister((long)Registers.Status, 0x705); // Temporary solution
         }
 
-        private readonly Machine machine;
+        private readonly Machine _machine;
 
-        private InterruptManager<Interrupts> IRQManager;
-
-        private readonly DoubleWordRegisterCollection registers;
+        private readonly InterruptManager<Interrupts> _interruptsManager;
 
         private enum Interrupts
         {

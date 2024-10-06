@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
@@ -18,93 +18,93 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
 
         public void Reset()
         {
-            byteRegisters.Reset();
-            wordRegisters.Reset();
-            doubleWordRegisters.Reset();
-            pageBuffer.Clear();
+            _byteRegisters.Reset();
+            _wordRegisters.Reset();
+            _doubleWordRegisters.Reset();
+            _pageBuffer.Clear();
         }
 
         public byte ReadByte(long offset)
         {
-            switch (sector)
+            switch (_sector)
             {
                 case Sector.MainArray:
                     // Flash read
                     break;
                 case Sector.RWWEE:
-                    return rwweeMemory.ReadByte(offset);
+                    return _rwweeMemory.ReadByte(offset);
                 case Sector.AUX:
-                    return auxiliaryMemory.ReadByte(offset);
+                    return _auxiliaryMemory.ReadByte(offset);
                 case Sector.Control:
-                    return byteRegisters.Read(offset);
+                    return _byteRegisters.Read(offset);
             }
             return 0x0;
         }
         public ushort ReadWord(long offset)
         {
-            switch (sector)
+            switch (_sector)
             {
                 case Sector.MainArray:
                     // Flash read
                     break;
                 case Sector.RWWEE:
-                    return rwweeMemory.ReadWord(offset);
+                    return _rwweeMemory.ReadWord(offset);
                 case Sector.AUX:
-                    return auxiliaryMemory.ReadWord(offset);
+                    return _auxiliaryMemory.ReadWord(offset);
                 case Sector.Control:
-                    return wordRegisters.Read(offset);
+                    return _wordRegisters.Read(offset);
             }
             return 0x0;
         }
         public uint ReadDoubleWord(long offset)
         {
 
-            switch (sector)
+            switch (_sector)
             {
                 case Sector.MainArray:
                     // Flash read
                     break;
                 case Sector.RWWEE:
-                    return rwweeMemory.ReadDoubleWord(offset);
+                    return _rwweeMemory.ReadDoubleWord(offset);
                 case Sector.AUX:
-                    return auxiliaryMemory.ReadDoubleWord(offset);
+                    return _auxiliaryMemory.ReadDoubleWord(offset);
                 case Sector.Control:
-                    return doubleWordRegisters.Read(offset);
+                    return _doubleWordRegisters.Read(offset);
             }
             return 0x0;
         }
         public void WriteByte(long offset, byte value)
         {
-            switch (sector)
+            switch (_sector)
             {
                 case Sector.MainArray:
                 case Sector.RWWEE:
                 case Sector.AUX:
-                    interruptsManager.SetInterrupt(Interrupts.Error);
+                    _interruptsManager.SetInterrupt(Interrupts.Error);
                     break;
                 case Sector.Control:
-                    byteRegisters.Write(offset, value);
+                    _byteRegisters.Write(offset, value);
                     break;
             }
 
         }
         public void WriteWord(long offset, ushort value)
         {
-            switch (sector)
+            switch (_sector)
             {
                 case Sector.MainArray:
                 case Sector.RWWEE:
                 case Sector.AUX:
-                    pageBuffer.Load(value);
+                    _pageBuffer.Load(value);
                     break;
                 case Sector.Control:
-                    wordRegisters.Write(offset, value);
+                    _wordRegisters.Write(offset, value);
                     break;
             }
         }
         public void WriteDoubleWord(long offset, uint value)
         {
-            switch (sector)
+            switch (_sector)
             {
                 case Sector.MainArray:
                 case Sector.RWWEE:
@@ -112,7 +112,7 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
                     this.WarningLog("32-bit write to pageBuffer not implemented.");
                     break;
                 case Sector.Control:
-                    doubleWordRegisters.Write(offset, value);
+                    _doubleWordRegisters.Write(offset, value);
                     break;
             }
         }
@@ -120,24 +120,24 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         public Saml22NVMCTRL(Machine machine)
         {
             this.WarningLog("NVMCTRL works on RWWEE and AUX space.");
-            this.machine = machine;
+            _machine = machine;
 
-            interruptsManager = new InterruptManager<Interrupts>(this);
+            _interruptsManager = new InterruptManager<Interrupts>(this);
 
-            byteRegisters = new ByteRegisterCollection(this);
-            wordRegisters = new WordRegisterCollection(this);
-            doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
+            _wordRegisters = new WordRegisterCollection(this);
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
 
-            rwweeMemory = new ArrayMemory(0x2000);
-            Erase(rwweeMemory);
-            auxiliaryMemory = new ArrayMemory(0xA100);
-            Erase(auxiliaryMemory);
+            _rwweeMemory = new ArrayMemory(0x2000);
+            Erase(_rwweeMemory);
+            _auxiliaryMemory = new ArrayMemory(0xA100);
+            Erase(_auxiliaryMemory);
 
-            pageBuffer = new PageBuffer(this);
+            _pageBuffer = new PageBuffer(this);
 
             DefineRegisters();
 
-            interruptsManager.SetInterrupt(Interrupts.Ready);
+            _interruptsManager.SetInterrupt(Interrupts.Ready);
         }
 
         private const int MEMORY_PAGE_SIZE_BYTES = 64;
@@ -146,75 +146,75 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         private const long CALIB_AUX_BASE_ADDR = 0x800000;
         private const long APB_BRIDGE_PBASE_ADDR = 0x41000000;
 
-        private readonly Machine machine;
-        private readonly InterruptManager<Interrupts> interruptsManager;
-        private readonly ByteRegisterCollection byteRegisters;
-        private readonly WordRegisterCollection wordRegisters;
-        private readonly DoubleWordRegisterCollection doubleWordRegisters;
-        private readonly PageBuffer pageBuffer;
-        private readonly ArrayMemory rwweeMemory;
-        private readonly ArrayMemory auxiliaryMemory;
+        private readonly Machine _machine;
+        private readonly InterruptManager<Interrupts> _interruptsManager;
+        private readonly ByteRegisterCollection _byteRegisters;
+        private readonly WordRegisterCollection _wordRegisters;
+        private readonly DoubleWordRegisterCollection _doubleWordRegisters;
+        private readonly PageBuffer _pageBuffer;
+        private readonly ArrayMemory _rwweeMemory;
+        private readonly ArrayMemory _auxiliaryMemory;
 
-        private Sector sector;
-        private Sector memorySector;
+        private Sector _sector;
+        private Sector _memorySector;
 
 
         // Registers fields
-        private IFlagRegisterField manualWrite;
-        private IValueRegisterField ADDR;
+        private IFlagRegisterField _manualWrite;
+        private IValueRegisterField _addr;
 
 
         private void DefineRegisters()
         {
-            wordRegisters.DefineRegister((long)Registers.CTRLA);
-            wordRegisters.AddAfterWriteHook((long)Registers.CTRLA, CommandExecution);
+            _wordRegisters.DefineRegister((long)Registers.CTRLA);
+            _wordRegisters.AddAfterWriteHook((long)Registers.CTRLA, CommandExecution);
 
-            doubleWordRegisters.DefineRegister((long)Registers.CTRLB, 0x80)
-            .WithFlag(7, out manualWrite);
+            _doubleWordRegisters.DefineRegister((long)Registers.CTRLB, 0x80)
+            .WithFlag(7, out _manualWrite);
 
 
-            doubleWordRegisters.DefineRegister((long)Registers.PARAM); // Reset value depend on NVM User row
+            _doubleWordRegisters.DefineRegister((long)Registers.PARAM); // Reset value depend on NVM User row
 
-            byteRegisters.AddRegister((long)Registers.INTENCLR, interruptsManager.GetInterruptEnableClearRegister<ByteRegister>());
-            byteRegisters.AddRegister((long)Registers.INTENSET, interruptsManager.GetInterruptEnableSetRegister<ByteRegister>());
-            byteRegisters.AddRegister((long)Registers.INTFLAG, interruptsManager.GetRegister<ByteRegister>(writeCallback: (irq, oldValue, newValue) =>
+            _byteRegisters.AddRegister((long)Registers.INTENCLR, _interruptsManager.GetInterruptEnableClearRegister<ByteRegister>());
+            _byteRegisters.AddRegister((long)Registers.INTENSET, _interruptsManager.GetInterruptEnableSetRegister<ByteRegister>());
+            _byteRegisters.AddRegister((long)Registers.INTFLAG, _interruptsManager.GetRegister<ByteRegister>(writeCallback: (irq, oldValue, newValue) =>
             {
                 if (newValue && irq != Interrupts.Ready)
-                    interruptsManager.ClearInterrupt(irq);
+                    _interruptsManager.ClearInterrupt(irq);
             }, valueProviderCallback: (irq, _) =>
             {
-                return interruptsManager.IsSet(irq);
+                return _interruptsManager.IsSet(irq);
             }));
 
-            wordRegisters.DefineRegister((long)Registers.STATUS); // SB determined by value in NV Memory
-                                                                  // .WithFlag(0, FieldMode.Read, name: "PRM")
-                                                                  // .WithFlag(1, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOAD")
-                                                                  // .WithFlag(2, FieldMode.Read | FieldMode.WriteOneToClear, name: "PROGE")
-                                                                  // .WithFlag(3, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOCKE")
-                                                                  // .WithFlag(4, FieldMode.Read | FieldMode.WriteOneToClear, name: "NVME")
-                                                                  // .WithIgnoredBits(5, 3)
-                                                                  // .WithFlag(8, FieldMode.Read, name: "SB")
-                                                                  // .WithIgnoredBits(9, 7);
+            _wordRegisters.DefineRegister((long)Registers.STATUS); // SB determined by value in NV Memory
+                                                                   // .WithFlag(0, FieldMode.Read, name: "PRM")
+                                                                   // .WithFlag(1, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOAD")
+                                                                   // .WithFlag(2, FieldMode.Read | FieldMode.WriteOneToClear, name: "PROGE")
+                                                                   // .WithFlag(3, FieldMode.Read | FieldMode.WriteOneToClear, name: "LOCKE")
+                                                                   // .WithFlag(4, FieldMode.Read | FieldMode.WriteOneToClear, name: "NVME")
+                                                                   // .WithIgnoredBits(5, 3)
+                                                                   // .WithFlag(8, FieldMode.Read, name: "SB")
+                                                                   // .WithIgnoredBits(9, 7);
 
-            doubleWordRegisters.DefineRegister((long)Registers.ADDR)
-                .WithValueField(0, 17, out ADDR, name: "ADDR")
+            _doubleWordRegisters.DefineRegister((long)Registers.ADDR)
+                .WithValueField(0, 17, out _addr, name: "ADDR")
                 .WithIgnoredBits(17, 15);
 
-            wordRegisters.DefineRegister((long)Registers.LOCK); // Reset value determined by NV memory user row
+            _wordRegisters.DefineRegister((long)Registers.LOCK); // Reset value determined by NV memory user row
         }
 
         public void SetAbsoluteAddress(ulong address)
         {
-            sector = (Sector)(address & 0xFFFF0000);
+            _sector = (Sector)(address & 0xFFFF0000);
 
-            if (sector != Sector.Control)
+            if (_sector != Sector.Control)
             {
-                memorySector = sector;
-                ADDR.Value = (address & 0x1FFFF) >> 1;
+                _memorySector = _sector;
+                _addr.Value = (address & 0x1FFFF) >> 1;
             }
         }
 
-        private ulong WriteOffset => ADDR.Value << 1;
+        private ulong WriteOffset => _addr.Value << 1;
         private ulong Row => WriteOffset / (MEMORY_PAGE_SIZE_BYTES * 4);
         private ulong Page => (WriteOffset - (Row * MEMORY_PAGE_SIZE_BYTES * 4)) / MEMORY_PAGE_SIZE_BYTES;
 
@@ -232,19 +232,19 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
                         this.WarningLog("NVMCTRL can't operate on Main Array.");
                         break;
                     case Command.EAR:
-                        EraseRow(auxiliaryMemory);
+                        EraseRow(_auxiliaryMemory);
                         break;
                     case Command.WAR:
-                        WriteToMemory(auxiliaryMemory);
+                        WriteToMemory(_auxiliaryMemory);
                         break;
                     case Command.RWWEEER:
-                        EraseRow(rwweeMemory);
+                        EraseRow(_rwweeMemory);
                         break;
                     case Command.RWWEEWP:
-                        WriteToMemory(rwweeMemory);
+                        WriteToMemory(_rwweeMemory);
                         break;
                     case Command.PBC:
-                        pageBuffer.Clear();
+                        _pageBuffer.Clear();
                         break;
                     default:
                         this.WarningLog($"Command {cmd} is not supported.");
@@ -281,46 +281,46 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
                 throw new ArgumentNullException(nameof(memory));
 
             long offset = (long)((Row * (MEMORY_PAGE_SIZE_BYTES * 4)) + (Page * MEMORY_PAGE_SIZE_BYTES));
-            for (int index = 0; index < pageBuffer.Buffer.Length; index++)
+            for (int index = 0; index < _pageBuffer.Buffer.Length; index++)
             {
                 ulong currentData = memory.ReadQuadWord(offset + (index * sizeof(ulong)));
-                memory.WriteQuadWord(offset + (index * sizeof(ulong)), currentData & pageBuffer.Buffer[index]);
+                memory.WriteQuadWord(offset + (index * sizeof(ulong)), currentData & _pageBuffer.Buffer[index]);
             }
-            pageBuffer.Clear();
+            _pageBuffer.Clear();
         }
 
         private sealed class PageBuffer
         {
 
-            public uint[] Buffer => page;
+            public uint[] Buffer { get; } = new uint[16];
 
             public void Load(ushort data)
             {
                 // Random access writes to 32-bit words within the page buffer will overwrite the opposite word within the same 64-bit section with ones.
                 if (IsBoundaryCrossed)
-                    page[DoubleWordDataIndex] = 0xFFFF_FFFF;
+                    Buffer[DoubleWordDataIndex] = 0xFFFF_FFFF;
 
                 if (WordDataIndex % 2 == 0)
                 {
-                    page[DoubleWordDataIndex] &= 0xFFFF_0000;
-                    page[DoubleWordDataIndex] |= data | 0xFFFF_0000;
+                    Buffer[DoubleWordDataIndex] &= 0xFFFF_0000;
+                    Buffer[DoubleWordDataIndex] |= data | 0xFFFF_0000;
                 }
                 else
                 {
-                    page[DoubleWordDataIndex] &= 0x0000_FFFF;
-                    page[DoubleWordDataIndex] |= ((uint)data) << 16;
+                    Buffer[DoubleWordDataIndex] &= 0x0000_FFFF;
+                    Buffer[DoubleWordDataIndex] |= ((uint)data) << 16;
                 }
                 // parent.WarningLog($"pageBuffer[{Page32BitDataIndex}] [0x{page[Page32BitDataIndex]:X8}]");
-                previousPage32BitDataIndex = DoubleWordDataIndex;
-                if (!parent.manualWrite.Value && WordDataIndex >= 15)
+                _previousPage32BitDataIndex = DoubleWordDataIndex;
+                if (!_parent._manualWrite.Value && WordDataIndex >= 15)
                 {
-                    switch (parent.memorySector)
+                    switch (_parent._memorySector)
                     {
                         case Sector.RWWEE:
-                            parent.WriteToMemory(parent.rwweeMemory);
+                            _parent.WriteToMemory(_parent._rwweeMemory);
                             break;
                         case Sector.AUX:
-                            parent.WriteToMemory(parent.auxiliaryMemory);
+                            _parent.WriteToMemory(_parent._auxiliaryMemory);
                             break;
                     }
                 }
@@ -328,24 +328,22 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
 
             public void Clear()
             {
-                for (int index = 0; index < page.Length; index++)
-                    page[index] = uint.MaxValue;
-                previousPage32BitDataIndex = 0;
+                for (int index = 0; index < Buffer.Length; index++)
+                    Buffer[index] = uint.MaxValue;
+                _previousPage32BitDataIndex = 0;
             }
 
             public PageBuffer(Saml22NVMCTRL parent)
             {
-                this.parent = parent;
+                _parent = parent;
                 Clear();
             }
 
-            private readonly Saml22NVMCTRL parent;
-            private readonly uint[] page = new uint[16];
-
-            private long previousPage32BitDataIndex;
-            private long DoubleWordDataIndex => (long)(parent.WriteOffset & (MEMORY_PAGE_SIZE_BYTES - 1)) / sizeof(uint);
-            private long WordDataIndex => (long)(parent.WriteOffset & (MEMORY_PAGE_SIZE_BYTES - 1)) / sizeof(ushort);
-            private bool IsBoundaryCrossed => DoubleWordDataIndex != previousPage32BitDataIndex;
+            private readonly Saml22NVMCTRL _parent;
+            private long _previousPage32BitDataIndex;
+            private long DoubleWordDataIndex => (long)(_parent.WriteOffset & (MEMORY_PAGE_SIZE_BYTES - 1)) / sizeof(uint);
+            private long WordDataIndex => (long)(_parent.WriteOffset & (MEMORY_PAGE_SIZE_BYTES - 1)) / sizeof(ushort);
+            private bool IsBoundaryCrossed => DoubleWordDataIndex != _previousPage32BitDataIndex;
         }
 
         private enum Command

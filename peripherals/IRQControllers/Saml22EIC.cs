@@ -1,4 +1,4 @@
-using Antmicro.Renode.Core;
+﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.Bus;
 
@@ -10,17 +10,17 @@ namespace Antmicro.Renode.Peripherals.IRQControllers
 
         public void Reset()
         {
-            doubleWordRegisters.Reset();
-            wordRegisters.Reset();
-            byteRegisters.Reset();
+            _doubleWordRegisters.Reset();
+            _wordRegisters.Reset();
+            _byteRegisters.Reset();
         }
 
-        public uint ReadDoubleWord(long offset) => doubleWordRegisters.Read(offset);
-        public void WriteDoubleWord(long offset, uint value) => doubleWordRegisters.Write(offset, value);
-        public ushort ReadWord(long offset) => wordRegisters.Read(offset);
-        public void WriteWord(long offset, ushort value) => wordRegisters.Write(offset, value);
-        public byte ReadByte(long offset) => byteRegisters.Read(offset);
-        public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
+        public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
+        public void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
+        public ushort ReadWord(long offset) => _wordRegisters.Read(offset);
+        public void WriteWord(long offset, ushort value) => _wordRegisters.Write(offset, value);
+        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
         public IGPIOReceiver GetLocalReceiver(int index)
         {
@@ -29,17 +29,17 @@ namespace Antmicro.Renode.Peripherals.IRQControllers
 
         public Saml22EIC(Machine machine)
         {
-            this.machine = machine;
+            _machine = machine;
 
-            doubleWordRegisters = new DoubleWordRegisterCollection(this);
-            wordRegisters = new WordRegisterCollection(this);
-            byteRegisters = new ByteRegisterCollection(this);
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _wordRegisters = new WordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
         }
 
-        private readonly Machine machine;
-        private readonly DoubleWordRegisterCollection doubleWordRegisters;
-        private readonly WordRegisterCollection wordRegisters;
-        private readonly ByteRegisterCollection byteRegisters;
+        private readonly Machine _machine;
+        private readonly DoubleWordRegisterCollection _doubleWordRegisters;
+        private readonly WordRegisterCollection _wordRegisters;
+        private readonly ByteRegisterCollection _byteRegisters;
 
         private enum Registers : long
         {

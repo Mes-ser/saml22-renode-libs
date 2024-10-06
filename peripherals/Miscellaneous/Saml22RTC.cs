@@ -1,4 +1,4 @@
-using Antmicro.Renode.Core;
+﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
@@ -15,50 +15,50 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public void Reset()
         {
-            doubleWordRegisters.Reset();
-            wordRegisters.Reset();
-            byteRegisters.Reset();
-            operatingMode.Value = OperatingMode.COUNT32;
-            enabled.Value = false;
+            _doubleWordRegisters.Reset();
+            _wordRegisters.Reset();
+            _byteRegisters.Reset();
+            _operatingMode.Value = OperatingMode.COUNT32;
+            _enabled.Value = false;
         }
 
-        public uint ReadDoubleWord(long offset) => doubleWordRegisters.Read(offset);
-        public void WriteDoubleWord(long offset, uint value) => doubleWordRegisters.Write(offset, value);
-        public ushort ReadWord(long offset) => wordRegisters.Read(offset);
-        public void WriteWord(long offset, ushort value) => wordRegisters.Write(offset, value);
-        public byte ReadByte(long offset) => byteRegisters.Read(offset);
-        public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
+        public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
+        public void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
+        public ushort ReadWord(long offset) => _wordRegisters.Read(offset);
+        public void WriteWord(long offset, ushort value) => _wordRegisters.Write(offset, value);
+        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
         public Saml22RTC(Machine machine)
         {
             this.WarningLog("RTC is a stub. Does nothing.");
-            this.machine = machine;
+            _machine = machine;
 
-            interruptsManager = new InterruptManager<Interrupts>(this);
+            _interruptsManager = new InterruptManager<Interrupts>(this);
 
-            doubleWordRegisters = new DoubleWordRegisterCollection(this);
-            wordRegisters = new WordRegisterCollection(this);
-            byteRegisters = new ByteRegisterCollection(this);
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _wordRegisters = new WordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
 
 
             DefineRegisters();
         }
 
-        private readonly Machine machine;
-        private readonly InterruptManager<Interrupts> interruptsManager;
-        private readonly DoubleWordRegisterCollection doubleWordRegisters;
-        private readonly WordRegisterCollection wordRegisters;
-        private readonly ByteRegisterCollection byteRegisters;
+        private readonly Machine _machine;
+        private readonly InterruptManager<Interrupts> _interruptsManager;
+        private readonly DoubleWordRegisterCollection _doubleWordRegisters;
+        private readonly WordRegisterCollection _wordRegisters;
+        private readonly ByteRegisterCollection _byteRegisters;
 
-        private IEnumRegisterField<OperatingMode> operatingMode;
-        private IFlagRegisterField enabled;
-        private IFlagRegisterField csSync;
-        private IValueRegisterField prescaler;
+        private IEnumRegisterField<OperatingMode> _operatingMode;
+        private IFlagRegisterField _enabled;
+        private IFlagRegisterField _csSync;
+        private IValueRegisterField _prescaler;
 
         private void DefineRegisters()
         {
 
-            wordRegisters.DefineRegister((long)Registers.ControlB)
+            _wordRegisters.DefineRegister((long)Registers.ControlB)
                 .WithTaggedFlag("GP0EN", 0)
                 .WithIgnoredBits(1, 3)
                 .WithTaggedFlag("DEBMAJ", 4)
@@ -70,28 +70,29 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithTag("ACTF", 12, 3)
                 .WithIgnoredBits(15, 1);
 
-            byteRegisters.DefineRegister((long)Registers.DebugControl)
+            _byteRegisters.DefineRegister((long)Registers.DebugControl)
                 .WithTaggedFlag("DBGRUN", 0);
 
-            byteRegisters.DefineRegister((long)Registers.FrequencyCorrelation);
+            _byteRegisters.DefineRegister((long)Registers.FrequencyCorrelation);
 
-            doubleWordRegisters.DefineRegister((long)Registers.GeneralPurpose0)
+            _doubleWordRegisters.DefineRegister((long)Registers.GeneralPurpose0)
                 .WithTag("GP", 0, 32);
-            doubleWordRegisters.DefineRegister((long)Registers.GeneralPurpose1)
+            _doubleWordRegisters.DefineRegister((long)Registers.GeneralPurpose1)
                 .WithTag("GPx", 0, 32);
 
             WordRegister CommonControlA = new WordRegister(this)
-                .WithFlag(0, writeCallback: (oldValue, newValue) => {
-                    if(newValue)
+                .WithFlag(0, writeCallback: (oldValue, newValue) =>
+                {
+                    if (newValue)
                         Reset();
                 })
-                .WithFlag(1, out enabled)
-                .WithEnumField(2, 2, out operatingMode)
-                .WithValueField(8, 4, out prescaler)
+                .WithFlag(1, out _enabled)
+                .WithEnumField(2, 2, out _operatingMode)
+                .WithValueField(8, 4, out _prescaler)
                 .WithIgnoredBits(12, 1)
                 .WithTaggedFlag("BKTRST", 13)
                 .WithTaggedFlag("GPTRST", 14)
-                .WithFlag(15, out csSync); // This bit is named in Count mode as 'COUNTSYNC' and in Clock as 'CLOCKSYNC'
+                .WithFlag(15, out _csSync); // This bit is named in Count mode as 'COUNTSYNC' and in Clock as 'CLOCKSYNC'
 
             // DoubleWordRegister CommonSynchronizationBusy = new DoubleWordRegister(this);
 
@@ -124,27 +125,27 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             WordRegister clockControlA = CommonControlA;
             clockControlA.WithTaggedFlag("MATCHCLR", 7);
             clockControlA.WithTaggedFlag("CLKREP", 6);
-            wordRegisters.AddConditionalRegister((long)Registers.ControlA, clockControlA, () => operatingMode.Value == OperatingMode.CLOCK);
+            _wordRegisters.AddConditionalRegister((long)Registers.ControlA, clockControlA, () => _operatingMode.Value == OperatingMode.CLOCK);
 
-            doubleWordRegisters.DefineConditionalRegister((long)Registers.EventControl, () => operatingMode.Value == OperatingMode.CLOCK);
+            _doubleWordRegisters.DefineConditionalRegister((long)Registers.EventControl, () => _operatingMode.Value == OperatingMode.CLOCK);
 
-            doubleWordRegisters.DefineConditionalRegister((long)Registers.SynchronizationBusy, () => operatingMode.Value == OperatingMode.CLOCK);
+            _doubleWordRegisters.DefineConditionalRegister((long)Registers.SynchronizationBusy, () => _operatingMode.Value == OperatingMode.CLOCK);
 
-            wordRegisters.AddConditionalRegister((long)Registers.InterruptEnableClear,
-                interruptsManager.GetInterruptEnableClearRegister<WordRegister>(),
-                () => operatingMode.Value == OperatingMode.CLOCK);
-            wordRegisters.AddConditionalRegister((long)Registers.InterruptEnableSet,
-                interruptsManager.GetInterruptEnableSetRegister<WordRegister>(),
-                () => operatingMode.Value == OperatingMode.CLOCK);
-            wordRegisters.AddConditionalRegister((long)Registers.InterruptFlagStatusandClear,
-                interruptsManager.GetRegister<WordRegister>(writeCallback: (irq, oldValue, newValue) =>
+            _wordRegisters.AddConditionalRegister((long)Registers.InterruptEnableClear,
+                _interruptsManager.GetInterruptEnableClearRegister<WordRegister>(),
+                () => _operatingMode.Value == OperatingMode.CLOCK);
+            _wordRegisters.AddConditionalRegister((long)Registers.InterruptEnableSet,
+                _interruptsManager.GetInterruptEnableSetRegister<WordRegister>(),
+                () => _operatingMode.Value == OperatingMode.CLOCK);
+            _wordRegisters.AddConditionalRegister((long)Registers.InterruptFlagStatusandClear,
+                _interruptsManager.GetRegister<WordRegister>(writeCallback: (irq, oldValue, newValue) =>
                 {
                     if (newValue)
-                        interruptsManager.ClearInterrupt(irq);
-                }, valueProviderCallback: (irq, _) => interruptsManager.IsSet(irq)),
-                () => operatingMode.Value == OperatingMode.CLOCK);
+                        _interruptsManager.ClearInterrupt(irq);
+                }, valueProviderCallback: (irq, _) => _interruptsManager.IsSet(irq)),
+                () => _operatingMode.Value == OperatingMode.CLOCK);
 
-            doubleWordRegisters.DefineConditionalRegister((long)Registers.Counter_ClockValue, () => operatingMode.Value == OperatingMode.CLOCK)
+            _doubleWordRegisters.DefineConditionalRegister((long)Registers.Counter_ClockValue, () => _operatingMode.Value == OperatingMode.CLOCK)
                 .WithTag("SECOND", 0, 6)
                 .WithTag("MINUTE", 6, 6)
                 .WithTag("HOUR", 12, 5)
@@ -152,7 +153,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithTag("MONTH", 22, 4)
                 .WithTag("YEAR", 26, 6);
 
-            doubleWordRegisters.DefineConditionalRegister((long)Registers.Compare_AlarmValue, () => operatingMode.Value == OperatingMode.CLOCK)
+            _doubleWordRegisters.DefineConditionalRegister((long)Registers.Compare_AlarmValue, () => _operatingMode.Value == OperatingMode.CLOCK)
                 .WithTag("SECOND", 0, 6)
                 .WithTag("MINUTE", 6, 6)
                 .WithTag("HOUR", 12, 5)
@@ -160,7 +161,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithTag("MONTH", 22, 4)
                 .WithTag("YEAR", 26, 6);
 
-            byteRegisters.DefineConditionalRegister((long)Registers.AlarmMask, () => operatingMode.Value == OperatingMode.CLOCK)
+            _byteRegisters.DefineConditionalRegister((long)Registers.AlarmMask, () => _operatingMode.Value == OperatingMode.CLOCK)
                 .WithTag("SEL", 0, 3);
 
         }

@@ -1,4 +1,4 @@
-using Antmicro.Renode.Core;
+﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
@@ -11,27 +11,27 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public void Reset()
         {
-            doubleWordRegisters.Reset();
-            byteRegisters.Reset();
+            _doubleWordRegisters.Reset();
+            _byteRegisters.Reset();
         }
 
-        public uint ReadDoubleWord(long offset) => doubleWordRegisters.Read(offset);
-        public void WriteDoubleWord(long offset, uint value) => doubleWordRegisters.Write(offset, value);
-        public byte ReadByte(long offset) => byteRegisters.Read(offset);
-        public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
+        public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
+        public void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
+        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
         public Saml22GCLK(Machine machine)
         {
             this.WarningLog("GCLK is a stub. Does nothing.");
-            this.machine = machine;
+            _machine = machine;
 
-            doubleWordRegisters = new DoubleWordRegisterCollection(this);
-            byteRegisters = new ByteRegisterCollection(this);
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
         }
 
-        private readonly Machine machine;
-        private readonly DoubleWordRegisterCollection doubleWordRegisters;
-        private readonly ByteRegisterCollection byteRegisters;
+        private readonly Machine _machine;
+        private readonly DoubleWordRegisterCollection _doubleWordRegisters;
+        private readonly ByteRegisterCollection _byteRegisters;
 
 
         private enum Registers

@@ -1,4 +1,4 @@
-using Antmicro.Renode.Core;
+﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
@@ -16,66 +16,66 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public long XOSCFrequency
         {
-            get => xosc.Frequency;
+            get => _xosc.Frequency;
             set
             {
-                if(xosc == null && value > 0)
-                    xosc = new Crystal(this, value);
-                if(xosc != null && value > 0)
-                    xosc.Frequency = value;
+                if (_xosc == null && value > 0)
+                    _xosc = new Crystal(this, value);
+                if (_xosc != null && value > 0)
+                    _xosc.Frequency = value;
             }
         }
 
         public void Reset()
         {
-            doubleWordRegisters.Reset();
-            byteRegisters.Reset();
+            _doubleWordRegisters.Reset();
+            _byteRegisters.Reset();
         }
 
-        public uint ReadDoubleWord(long offset) => doubleWordRegisters.Read(offset);
-        public void WriteDoubleWord(long offset, uint value) => doubleWordRegisters.Write(offset, value);
-        public ushort ReadWord(long offset) => wordRegisters.Read(offset);
-        public void WriteWord(long offset, ushort value) => wordRegisters.Write(offset, value);
-        public byte ReadByte(long offset) => byteRegisters.Read(offset);
-        public void WriteByte(long offset, byte value) => byteRegisters.Write(offset, value);
+        public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
+        public void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
+        public ushort ReadWord(long offset) => _wordRegisters.Read(offset);
+        public void WriteWord(long offset, ushort value) => _wordRegisters.Write(offset, value);
+        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
         public Saml22OSCCTRL(Machine machine)
         {
             this.WarningLog("OSCCTRL is a stub. Does nothing.");
-            this.machine = machine;
+            _machine = machine;
 
-            interruptManager = new InterruptManager<Interrupts>(this);
+            _interruptManager = new InterruptManager<Interrupts>(this);
 
-            osc16m = new Crystal(this, 16_000_000);
+            _osc16m = new Crystal(this, 16_000_000);
 
-            doubleWordRegisters = new DoubleWordRegisterCollection(this);
-            wordRegisters = new WordRegisterCollection(this);
-            byteRegisters = new ByteRegisterCollection(this);
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _wordRegisters = new WordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
 
-            doubleWordRegisters.DefineRegister((long)Registers.STATUS, 0x111); // TODO: temporary solution
+            _doubleWordRegisters.DefineRegister((long)Registers.STATUS, 0x111); // TODO: temporary solution
         }
 
-        private readonly Machine machine;
-        private readonly InterruptManager<Interrupts> interruptManager;
-        private Crystal xosc;
-        private readonly Crystal dfll48m;
-        private readonly Crystal osc16m;
-        private readonly Crystal dpll96m;
-        private readonly DoubleWordRegisterCollection doubleWordRegisters;
-        private readonly WordRegisterCollection wordRegisters;
-        private readonly ByteRegisterCollection byteRegisters;
+        private readonly Machine _machine;
+        private readonly InterruptManager<Interrupts> _interruptManager;
+        private Crystal _xosc;
+        private readonly Crystal _dfll48m;
+        private readonly Crystal _osc16m;
+        private readonly Crystal _dpll96m;
+        private readonly DoubleWordRegisterCollection _doubleWordRegisters;
+        private readonly WordRegisterCollection _wordRegisters;
+        private readonly ByteRegisterCollection _byteRegisters;
 
         private sealed class Crystal
         {
 
             public bool Enabled
             {
-                get => enabled;
+                get => _enabled;
                 set
                 {
-                    if (!enabled && value)
+                    if (!_enabled && value)
                     {
-                        startUp.Enabled = true;
+                        _startUp.Enabled = true;
                     }
                 }
             }
@@ -83,54 +83,53 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 get
                 {
-                    if (enabled && actualFrequency > 0)
-                        return actualFrequency;
+                    if (_enabled && _actualFrequency > 0)
+                        return _actualFrequency;
                     return 0;
                 }
-                set => actualFrequency = value;
+                set => _actualFrequency = value;
             }
 
-            public bool Ready => ready;
+            public bool Ready { get; private set; }
 
             public ulong StartUpTime
             {
                 set
                 {
-                    startUp.Limit = value;
+                    _startUp.Limit = value;
                 }
             }
 
             public void Reset()
             {
-                enabled = enabledByDefault;
-                ready = false;
+                _enabled = _enabledByDefault;
+                Ready = false;
             }
 
             public Crystal(Saml22OSCCTRL saml22oscctrl, long nominalFrequency, bool enabledByDefault = false)
             {
-                this.saml22oscctrl = saml22oscctrl;
-                this.nominalFrequency = nominalFrequency;
-                this.enabledByDefault = enabledByDefault;
-                enabled = enabledByDefault;
-                startUp = new LimitTimer(this.saml22oscctrl.machine.ClockSource,
-                    nominalFrequency, this.saml22oscctrl,
+                _saml22oscctrl = saml22oscctrl;
+                _nominalFrequency = nominalFrequency;
+                _enabledByDefault = enabledByDefault;
+                _enabled = enabledByDefault;
+                _startUp = new LimitTimer(_saml22oscctrl._machine.ClockSource,
+                    nominalFrequency, _saml22oscctrl,
                     "Oscillator Startup", 32768,
                     workMode: Time.WorkMode.OneShot, eventEnabled: true, direction: Time.Direction.Ascending);
-                startUp.LimitReached += StartUpTask;
+                _startUp.LimitReached += StartUpTask;
             }
 
             private void StartUpTask()
             {
-                ready = true;
+                Ready = true;
             }
 
-            private readonly Saml22OSCCTRL saml22oscctrl;
-            private readonly LimitTimer startUp;
-            private readonly long nominalFrequency;
-            private long actualFrequency;
-            private readonly bool enabledByDefault;
-            private bool ready;
-            private bool enabled;
+            private readonly Saml22OSCCTRL _saml22oscctrl;
+            private readonly LimitTimer _startUp;
+            private readonly long _nominalFrequency;
+            private long _actualFrequency;
+            private readonly bool _enabledByDefault;
+            private bool _enabled;
         }
 
         private enum Interrupts

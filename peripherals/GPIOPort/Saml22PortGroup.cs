@@ -1,4 +1,4 @@
-
+﻿
 
 using System.Collections.Generic;
 using System.Linq;
@@ -17,22 +17,22 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public void OnGPIO(int number, bool value)
         {
             this.DebugLog($"Signal on [{number}] value [{value}]");
-            if(!pads[number].Direction)
+            if (!_pads[number].Direction)
             {
                 this.WarningLog($"Received signal on output pin [{number}].");
                 return;
             }
-            pads[number].HandleInput(value);
+            _pads[number].HandleInput(value);
         }
 
         public void Toggle(int number)
         {
-            pads[number].HandleInput(!pads[number].Input);
+            _pads[number].HandleInput(!_pads[number].Input);
         }
 
         public void Reset()
         {
-            foreach (Pad pad in pads)
+            foreach (Pad pad in _pads)
             {
                 pad.Reset();
             }
@@ -45,9 +45,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
             Connections = Enumerable.Range(0, NUMBER_OF_PINS).ToDictionary(i => i, _ => (IGPIO)new GPIO());
 
-            pads = new Pad[NUMBER_OF_PINS];
-            for(int padID = 0; padID < NUMBER_OF_PINS; padID++)
-                pads[padID] = new Pad(Connections[padID]);
+            _pads = new Pad[NUMBER_OF_PINS];
+            for (int padID = 0; padID < NUMBER_OF_PINS; padID++)
+                _pads[padID] = new Pad(Connections[padID]);
 
             DefineRegisters();
         }
@@ -57,54 +57,54 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public readonly DoubleWordRegisterCollection doubleWordRegisters;
         public readonly ByteRegisterCollection byteRegisters;
-        private readonly Dictionary<int, IGPIO> connections;
-        private readonly Pad[] pads;
-        private IValueRegisterField pinMask;
+        private readonly Dictionary<int, IGPIO> _connections;
+        private readonly Pad[] _pads;
+        private readonly IValueRegisterField _pinMask;
 
         private void DefineRegisters()
         {
             doubleWordRegisters.DefineRegister((long)Registers.DataDirection)
                 .WithFlags(0, 32,
-                    writeCallback:(padID, oldValue, newValue) => pads[padID].DirectionSet(newValue),
-                    valueProviderCallback: (padID, _) => pads[padID].Direction
+                    writeCallback: (padID, oldValue, newValue) => _pads[padID].DirectionSet(newValue),
+                    valueProviderCallback: (padID, _) => _pads[padID].Direction
                 );
-             doubleWordRegisters.DefineRegister((long)Registers.DataDirectionClear)
-                .WithFlags(0, 32,
-                    writeCallback:(padID, oldValue, newValue) =>{ if(newValue) pads[padID].DirectionClear();},
-                    valueProviderCallback: (padID, _) => pads[padID].Direction
-                );
+            doubleWordRegisters.DefineRegister((long)Registers.DataDirectionClear)
+               .WithFlags(0, 32,
+                   writeCallback: (padID, oldValue, newValue) => { if (newValue) _pads[padID].DirectionClear(); },
+                   valueProviderCallback: (padID, _) => _pads[padID].Direction
+               );
             doubleWordRegisters.DefineRegister((long)Registers.DataDirectionSet)
                 .WithFlags(0, 32,
-                    writeCallback:(padID, oldValue, newValue) =>{ if(newValue) pads[padID].DirectionSet();},
-                    valueProviderCallback: (padID, _) => pads[padID].Direction
+                    writeCallback: (padID, oldValue, newValue) => { if (newValue) _pads[padID].DirectionSet(); },
+                    valueProviderCallback: (padID, _) => _pads[padID].Direction
                 );
             doubleWordRegisters.DefineRegister((long)Registers.DataDirectiontoggle)
                 .WithFlags(0, 32,
-                    writeCallback:(padID, oldValue, newValue) =>{ if(newValue) pads[padID].DirectionToggle();},
-                    valueProviderCallback: (padID, _) => pads[padID].Direction
+                    writeCallback: (padID, oldValue, newValue) => { if (newValue) _pads[padID].DirectionToggle(); },
+                    valueProviderCallback: (padID, _) => _pads[padID].Direction
                 );
             doubleWordRegisters.DefineRegister((long)Registers.DataOutputValue)
                 .WithFlags(0, 32,
-                    writeCallback:(padID, oldValue, newValue) => pads[padID].OutputSet(newValue),
-                    valueProviderCallback: (padID, _) => pads[padID].Output
+                    writeCallback: (padID, oldValue, newValue) => _pads[padID].OutputSet(newValue),
+                    valueProviderCallback: (padID, _) => _pads[padID].Output
                 );
             doubleWordRegisters.DefineRegister((long)Registers.DataOutputValueClear)
                 .WithFlags(0, 32,
-                    writeCallback:(padID, oldValue, newValue) =>{ if(newValue) pads[padID].OutputClear();},
-                    valueProviderCallback: (padID, _) => pads[padID].Output
+                    writeCallback: (padID, oldValue, newValue) => { if (newValue) _pads[padID].OutputClear(); },
+                    valueProviderCallback: (padID, _) => _pads[padID].Output
                 );
             doubleWordRegisters.DefineRegister((long)Registers.DataOutputValueSet)
                 .WithFlags(0, 32,
-                    writeCallback:(padID, oldValue, newValue) =>{ if(newValue) pads[padID].OutputSet();},
-                    valueProviderCallback: (padID, _) => pads[padID].Output
+                    writeCallback: (padID, oldValue, newValue) => { if (newValue) _pads[padID].OutputSet(); },
+                    valueProviderCallback: (padID, _) => _pads[padID].Output
                 );
             doubleWordRegisters.DefineRegister((long)Registers.DataOutputValueToggle)
                 .WithFlags(0, 32,
-                    writeCallback:(padID, oldValue, newValue) =>{ if(newValue) pads[padID].OutputToggle();},
-                    valueProviderCallback: (padID, _) => pads[padID].Output
+                    writeCallback: (padID, oldValue, newValue) => { if (newValue) _pads[padID].OutputToggle(); },
+                    valueProviderCallback: (padID, _) => _pads[padID].Output
                 );
             doubleWordRegisters.DefineRegister((long)Registers.DataInputValue)
-                .WithFlags(0, 32, FieldMode.Read, valueProviderCallback: (padID, _) => pads[padID].Input);
+                .WithFlags(0, 32, FieldMode.Read, valueProviderCallback: (padID, _) => _pads[padID].Input);
             doubleWordRegisters.DefineRegister((long)Registers.Control);
 
             doubleWordRegisters.DefineRegister((long)Registers.WriteConfiguration)
@@ -117,7 +117,8 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 .WithFlag(28, FieldMode.Write, name: "WRPMUX")
                 .WithFlag(30, FieldMode.Write, name: "WRPINCFG")
                 .WithFlag(31, FieldMode.Write, name: "HWSEL");
-            doubleWordRegisters.AddAfterWriteHook((long)Registers.WriteConfiguration, (offset, value) => {
+            doubleWordRegisters.AddAfterWriteHook((long)Registers.WriteConfiguration, (offset, value) =>
+            {
                 uint pinMask = BitHelper.GetValue(value, 0, 16);
                 bool pmuxen = BitHelper.IsBitSet(value, 16);
                 bool inen = BitHelper.IsBitSet(value, 17);
@@ -128,26 +129,30 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 bool wrpinconf = BitHelper.IsBitSet(value, 30);
                 uint hwsel = BitHelper.GetValue(value, 31, 1);
 
-                if(wrpinconf){
-                    BitHelper.ForeachActiveBit(pinMask, pinID => {
-                        pads[pinID + 16 * hwsel].PeripheralMultiplexerEnable = pmuxen;
-                        pads[pinID + 16 * hwsel].InputEnable = inen;
-                        pads[pinID + 16 * hwsel].OutputDriverStrength = drvstr;
+                if (wrpinconf)
+                {
+                    BitHelper.ForeachActiveBit(pinMask, pinID =>
+                    {
+                        _pads[pinID + 16 * hwsel].PeripheralMultiplexerEnable = pmuxen;
+                        _pads[pinID + 16 * hwsel].InputEnable = inen;
+                        _pads[pinID + 16 * hwsel].OutputDriverStrength = drvstr;
                     });
                 }
-                if(wrpmux){
-                    BitHelper.ForeachActiveBit(pinMask, pinID => {
-                        pads[pinID + 16 * hwsel].PeripheralMultiplexer = pmux;
+                if (wrpmux)
+                {
+                    BitHelper.ForeachActiveBit(pinMask, pinID =>
+                    {
+                        _pads[pinID + 16 * hwsel].PeripheralMultiplexer = pmux;
                     });
                 }
             });
 
             doubleWordRegisters.DefineRegister((long)Registers.EventInputControl);
 
-            for(int index = 0; index < NUMBER_OF_PINS / 2; index++)
+            for (int index = 0; index < NUMBER_OF_PINS / 2; index++)
             {
-                Pad padEven = pads[2 * index];
-                Pad padOdd = pads[2 * index + 1];
+                Pad padEven = _pads[2 * index];
+                Pad padOdd = _pads[2 * index + 1];
                 byteRegisters.DefineRegister((long)Registers.PeripheralMultiplexingX + index)
                     .WithValueField(0, 4,
                         writeCallback: (oldValue, newValue) => padEven.PeripheralMultiplexer = newValue,
@@ -162,9 +167,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 // });
             }
 
-            for(int index = 0; index < NUMBER_OF_PINS; index++)
+            for (int index = 0; index < NUMBER_OF_PINS; index++)
             {
-                Pad pad = pads[index];
+                Pad pad = _pads[index];
                 byteRegisters.DefineRegister((long)Registers.PinConfigurationN + index)
                     .WithFlag(0, name: "PMUXEN",
                         writeCallback: (oldValue, newValue) => pad.PeripheralMultiplexerEnable = newValue,
@@ -193,7 +198,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             public bool Direction { get; private set; }
             public bool Output { get; private set; }
-            public bool Input { get => pad.IsSet; }
+            public bool Input { get => _pad.IsSet; }
 
             public bool PeripheralMultiplexerEnable;
             public bool InputEnable;
@@ -202,20 +207,20 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             public ulong PeripheralMultiplexer;
 
             public void DirectionClear() => Direction = false;
-            public void DirectionSet(bool dir = true) =>  Direction = dir;
+            public void DirectionSet(bool dir = true) => Direction = dir;
             public void DirectionToggle() => Direction = !Direction;
 
             public void OutputClear() => Output = false;
-            public void OutputSet(bool output = true) =>  Output = output;
+            public void OutputSet(bool output = true) => Output = output;
             public void OutputToggle() => Output = !Output;
 
-            public void HandleInput(bool level) => pad.Set(level);
+            public void HandleInput(bool level) => _pad.Set(level);
 
             public void Reset()
             {
                 Direction = false;
                 Output = false;
-                pad.Set(false);
+                _pad.Set(false);
                 PeripheralMultiplexerEnable = false;
                 InputEnable = false;
                 PullEnable = false;
@@ -224,10 +229,10 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
             public Pad(IGPIO pad)
             {
-                this.pad = pad;
+                _pad = pad;
             }
 
-            private readonly IGPIO pad;
+            private readonly IGPIO _pad;
         }
 
         private enum Registers : long
