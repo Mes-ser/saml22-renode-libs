@@ -3,13 +3,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using Antmicro.Renode.Core;
+using Antmicro.Renode.Core.Structure;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Utilities;
 
 namespace Antmicro.Renode.Peripherals.GPIOPort
 {
-    public class Saml22PortGroup : IGPIOReceiver, INumberedGPIOOutput
+    public class Saml22PortGroup : IGPIOReceiver, INumberedGPIOOutput, IPeripheralRegister<IGPIOReceiver, NullRegistrationPoint>
     {
 
         public IReadOnlyDictionary<int, IGPIO> Connections { get; } // Pads
@@ -40,6 +41,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public Saml22PortGroup(Machine machine)
         {
+            _machine = machine;
             doubleWordRegisters = new DoubleWordRegisterCollection(this);
             byteRegisters = new ByteRegisterCollection(this);
 
@@ -54,7 +56,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
 
         private const int NUMBER_OF_PINS = 32;
-
+        private readonly Machine _machine;
         public readonly DoubleWordRegisterCollection doubleWordRegisters;
         public readonly ByteRegisterCollection byteRegisters;
         private readonly Dictionary<int, IGPIO> _connections;
@@ -191,6 +193,16 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 //     this.InfoLog($"{pad.PeripheralMultiplexerEnable}|{pad.InputEnable}|{pad.PullEnable}|{pad.OutputDriverStrength}|");
                 // });
             }
+        }
+
+        public void Register(IGPIOReceiver peripheral, NullRegistrationPoint registrationPoint)
+        {
+            _machine.RegisterAsAChildOf(this, peripheral, registrationPoint);
+        }
+
+        public void Unregister(IGPIOReceiver peripheral)
+        {
+            _machine.UnregisterAsAChildOf(this, peripheral);
         }
 
 
