@@ -20,10 +20,12 @@ include @peripherals/GPIOPort/Saml22PortGroup.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.Saml22PortGroup"
 include @peripherals/GPIOPort/Saml22Port.cs
 
-mach create
-machine LoadPlatformDescription $ORIGIN\renode-platform\sensorwatch.repl
+include @peripherals/Miscellaneous/Saml22SERCOM.cs
 
-sysbus LoadELF @build/watch.elf
+mach create
+machine LoadPlatformDescription $ORIGIN/renode-platform/sensorwatch.repl
+
+sysbus LoadELF @../Sensor-Watch/movement/make/build/watch.elf
 
 macro reset
 """
