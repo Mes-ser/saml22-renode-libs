@@ -78,7 +78,21 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             GroupBWriteConfiguration = GroupBDirection + 0x28,
             GroupBEventInputcontrol = GroupBDirection + 0x2C,
             GroupBPeripheralMultiplexingX = GroupBDirection + 0x30,
-            GroupBPinConfiguration = GroupBDirection + 0x40
+            GroupBPinConfiguration = GroupBDirection + 0x40,
+            GroupCDirection = GROUP_OFFSET * 2,
+            GroupCDirectionClear = GroupCDirection + GroupCDirection + 0x4,
+            GroupCDirectionSet = GroupCDirection + 0x8,
+            GroupCDirectiontoggle = GroupCDirection + 0xC,
+            GroupCOutputValue = GroupCDirection + 0x10,
+            GroupCOutputValueClear = GroupCDirection + 0x14,
+            GroupCOutputValueSet = GroupCDirection + 0x18,
+            GroupCOutputValueToggle = GroupCDirection + 0x1C,
+            GroupCInputValue = GroupCDirection + 0x20,
+            GroupCControl = GroupCDirection + 0x24,
+            GroupCWriteConfiguration = GroupCDirection + 0x28,
+            GroupCEventInputcontrol = GroupCDirection + 0x2C,
+            GroupCPeripheralMultiplexingX = GroupCDirection + 0x30,
+            GroupCPinConfiguration = GroupCDirection + 0x40
         }
 
     }

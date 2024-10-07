@@ -1,7 +1,6 @@
 ﻿
 
 using System.Collections.Generic;
-using System.Linq;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure;
 using Antmicro.Renode.Core.Structure.Registers;
@@ -13,7 +12,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
     public class Saml22PortGroup : IGPIOReceiver, INumberedGPIOOutput, IPeripheralRegister<IGPIOReceiver, NullRegistrationPoint>
     {
 
-        public IReadOnlyDictionary<int, IGPIO> Connections { get; } // Pads
+        public IReadOnlyDictionary<int, IGPIO> Connections => _connections;
 
         public void OnGPIO(int number, bool value)
         {
@@ -45,11 +44,14 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             doubleWordRegisters = new DoubleWordRegisterCollection(this);
             byteRegisters = new ByteRegisterCollection(this);
 
-            Connections = Enumerable.Range(0, NUMBER_OF_PINS).ToDictionary(i => i, _ => (IGPIO)new GPIO());
+            // Connections = Enumerable.Range(0, NUMBER_OF_PINS).ToDictionary(i => i, _ => (IGPIO)new GPIO());
 
             _pads = new Pad[NUMBER_OF_PINS];
             for (int padID = 0; padID < NUMBER_OF_PINS; padID++)
-                _pads[padID] = new Pad(Connections[padID]);
+            {
+                _pads[padID] = new Pad();
+                _connections.Add(padID, _pads[padID].PAD);
+            }
 
             DefineRegisters();
         }
@@ -59,7 +61,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         private readonly Machine _machine;
         public readonly DoubleWordRegisterCollection doubleWordRegisters;
         public readonly ByteRegisterCollection byteRegisters;
-        private readonly Dictionary<int, IGPIO> _connections;
+        private readonly Dictionary<int, IGPIO> _connections = new Dictionary<int, IGPIO>();
         private readonly Pad[] _pads;
         private readonly IValueRegisterField _pinMask;
 
@@ -102,7 +104,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 );
             doubleWordRegisters.DefineRegister((long)Registers.DataOutputValueToggle)
                 .WithFlags(0, 32,
-                    writeCallback: (padID, oldValue, newValue) => { if (newValue) _pads[padID].OutputToggle(); },
+                    writeCallback: (padID, oldValue, newValue) =>
+                    {
+                        if (newValue) _pads[padID].OutputToggle();
+                        if (newValue) this.DebugLog($"Pad [{padID}] toggled.");
+                    },
                     valueProviderCallback: (padID, _) => _pads[padID].Output
                 );
             doubleWordRegisters.DefineRegister((long)Registers.DataInputValue)
@@ -209,8 +215,10 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         private class Pad
         {
             public bool Direction { get; private set; }
-            public bool Output { get; private set; }
-            public bool Input { get => _pad.IsSet; }
+            public bool Output { get => PAD.IsSet; }
+            public bool Input { get => PAD.IsSet; }
+
+            public GPIO PAD { get; }
 
             public bool PeripheralMultiplexerEnable;
             public bool InputEnable;
@@ -222,29 +230,26 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             public void DirectionSet(bool dir = true) => Direction = dir;
             public void DirectionToggle() => Direction = !Direction;
 
-            public void OutputClear() => Output = false;
-            public void OutputSet(bool output = true) => Output = output;
-            public void OutputToggle() => Output = !Output;
+            public void OutputClear() => PAD.Set(false);
+            public void OutputSet(bool output = true) => PAD.Set(output);
+            public void OutputToggle() => PAD.Set(!PAD.IsSet);
 
-            public void HandleInput(bool level) => _pad.Set(level);
+            public void HandleInput(bool level) => PAD.Set(level);
 
             public void Reset()
             {
                 Direction = false;
-                Output = false;
-                _pad.Set(false);
+                PAD.Set(false);
                 PeripheralMultiplexerEnable = false;
                 InputEnable = false;
                 PullEnable = false;
                 OutputDriverStrength = false;
             }
 
-            public Pad(IGPIO pad)
+            public Pad()
             {
-                _pad = pad;
+                PAD = new GPIO();
             }
-
-            private readonly IGPIO _pad;
         }
 
         private enum Registers : long
