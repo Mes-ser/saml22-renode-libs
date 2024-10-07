@@ -1,9 +1,6 @@
 using "../../platform/saml22/saml22j18a/saml22j18a.repl"
 
 
-osc32kctrl:
-    UseXOSC32K: true
-
 user_led_0: Miscellaneous.LED @ pc
 
 pc:

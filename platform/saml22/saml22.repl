@@ -6,7 +6,6 @@ cpu: CPU.CortexM @ sysbus
 
 
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
-    systickFrequency: 4000000 // temporary solution
     priorityMask: 0xC0
     IRQ -> cpu@0
 
@@ -14,6 +13,8 @@ pm: Miscellaneous.Saml22PM @ sysbus 0x40000400
 
 
 mclk: Miscellaneous.Saml22MCLK @ sysbus 0x40000800
+    gclk: gclk
+    nvic: nvic
 
 oscctrl: Miscellaneous.Saml22OSCCTRL @ sysbus 0x40001000
 
@@ -22,6 +23,7 @@ osc32kctrl: Miscellaneous.Saml22OSC32KCTRL @ sysbus 0x40001400
 supc: Miscellaneous.Saml22SUPC @ sysbus 0x40001800
 
 gclk: Miscellaneous.Saml22GCLK @ sysbus 0x40001C00
+    oscctrl: oscctrl
 
 rtc: Miscellaneous.Saml22RTC @ sysbus 0x40002400
 

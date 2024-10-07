@@ -1,13 +1,25 @@
-﻿using Antmicro.Renode.Core;
+﻿using System;
+using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Antmicro.Renode.Peripherals.IRQControllers;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class Saml22MCLK : IDoubleWordPeripheral, IBytePeripheral, IKnownSize
     {
-        public long Size => 0x400;
+        public Saml22MCLK(Machine machine, ISAML22GCLK gclk, NVIC nvic)
+        {
+            this.WarningLog("MCLK is a stub. Does nothing.");
+            _machine = machine;
+            _nvic = nvic;
+            _gclk = gclk;
+            _gclk.GCLKClockChanged += MainClockChanged;
+
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _byteRegisters = new ByteRegisterCollection(this);
+        }
 
         public void Reset()
         {
@@ -20,16 +32,27 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public byte ReadByte(long offset) => _byteRegisters.Read(offset);
         public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
-        public Saml22MCLK(Machine machine)
+        private void MainClockChanged(SAML22GCLKClock clock)
         {
-            this.WarningLog("MCLK is a stub. Does nothing.");
-            _machine = machine;
+            if (clock == SAML22GCLKClock.GCLK_MAIN)
+            {
+                this.DebugLog($"[{clock}] changed.");
+                CLK_CPU = _gclk.GCLK_MAIN;
+            }
 
-            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
-            _byteRegisters = new ByteRegisterCollection(this);
+        }
+
+        public long Size => 0x400;
+
+        public long CLK_CPU
+        {
+            get => _nvic.Frequency;
+            set => _nvic.Frequency = value;
         }
 
         private readonly Machine _machine;
+        private readonly NVIC _nvic;
+        private readonly ISAML22GCLK _gclk;
         private readonly DoubleWordRegisterCollection _doubleWordRegisters;
         private readonly ByteRegisterCollection _byteRegisters;
 

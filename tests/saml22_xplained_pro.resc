@@ -1,4 +1,10 @@
 ### INCLUDES ###
+
+include @peripherals/Miscellaneous/ISAML22OSCCTRL.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22OSCClock"
+include @peripherals/Miscellaneous/ISAML22GCLK.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22GCLKClock"
+
 include @peripherals/Saml22MemoryMap.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Saml22MemoryMap"
 include @peripherals/Miscellaneous/Saml22RTC.cs
