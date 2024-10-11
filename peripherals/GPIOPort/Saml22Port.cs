@@ -1,6 +1,4 @@
-﻿
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure;
@@ -9,8 +7,16 @@ using Antmicro.Renode.Peripherals.Bus;
 
 namespace Antmicro.Renode.Peripherals.GPIOPort
 {
-    public class Saml22Port : IDoubleWordPeripheral, IBytePeripheral, IKnownSize, IPeripheralRegister<IGPIOReceiver, NumberRegistrationPoint<int>>
+    public class Saml22Port : IDoubleWordPeripheral, IBytePeripheral, IKnownSize,
+        IPeripheralRegister<IGPIOReceiver, NumberRegistrationPoint<int>>
     {
+
+        public Saml22Port(Machine machine)
+        {
+            this.InfoLog("PORT is a collection of PortGroup objects.");
+            _machine = machine;
+        }
+
         public long Size => 0x2000;
 
         public void Reset()
@@ -51,16 +57,10 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             _machine.UnregisterAsAChildOf(this, peripheral);
         }
 
-        public Saml22Port(Machine machine)
-        {
-            this.InfoLog("PORT is a collection of PortGroup objects.");
-            _machine = machine;
-        }
-
-        private const int GROUP_OFFSET = 0x80;
-
         private readonly Machine _machine;
         private readonly List<IGPIOReceiver> _portsGroup = new();
+
+        private const int GROUP_OFFSET = 0x80;
 
         private enum Registers : long
         {
@@ -107,6 +107,5 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             GroupCPeripheralMultiplexingX = GroupCDirection + 0x30,
             GroupCPinConfiguration = GroupCDirection + 0x40
         }
-
     }
 }
