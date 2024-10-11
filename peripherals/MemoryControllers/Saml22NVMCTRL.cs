@@ -24,98 +24,40 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
             _pageBuffer.Clear();
         }
 
-        public byte ReadByte(long offset)
-        {
-            switch (_sector)
-            {
-                case Sector.MainArray:
-                    // Flash read
-                    break;
-                case Sector.RWWEE:
-                    return _rwweeMemory.ReadByte(offset);
-                case Sector.AUX:
-                    return _auxiliaryMemory.ReadByte(offset);
-                case Sector.Control:
-                    return _byteRegisters.Read(offset);
-            }
-            return 0x0;
-        }
-        public ushort ReadWord(long offset)
-        {
-            switch (_sector)
-            {
-                case Sector.MainArray:
-                    // Flash read
-                    break;
-                case Sector.RWWEE:
-                    return _rwweeMemory.ReadWord(offset);
-                case Sector.AUX:
-                    return _auxiliaryMemory.ReadWord(offset);
-                case Sector.Control:
-                    return _wordRegisters.Read(offset);
-            }
-            return 0x0;
-        }
-        public uint ReadDoubleWord(long offset)
-        {
+        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public ushort ReadWord(long offset) => _wordRegisters.Read(offset);
+        public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
+        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
+        public void WriteWord(long offset, ushort value) => _wordRegisters.Write(offset, value);
+        public void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
 
-            switch (_sector)
-            {
-                case Sector.MainArray:
-                    // Flash read
-                    break;
-                case Sector.RWWEE:
-                    return _rwweeMemory.ReadDoubleWord(offset);
-                case Sector.AUX:
-                    return _auxiliaryMemory.ReadDoubleWord(offset);
-                case Sector.Control:
-                    return _doubleWordRegisters.Read(offset);
-            }
-            return 0x0;
-        }
-        public void WriteByte(long offset, byte value)
-        {
-            switch (_sector)
-            {
-                case Sector.MainArray:
-                case Sector.RWWEE:
-                case Sector.AUX:
-                    _interruptsManager.SetInterrupt(Interrupts.Error);
-                    break;
-                case Sector.Control:
-                    _byteRegisters.Write(offset, value);
-                    break;
-            }
+        [ConnectionRegion("RWWEE")]
+        public byte ReadByteRWWEE(long offset) => _rwweeMemory.ReadByte(offset);
+        [ConnectionRegion("RWWEE")]
+        public ushort ReadWordRWWEE(long offset) => _rwweeMemory.ReadWord(offset);
+        [ConnectionRegion("RWWEE")]
+        public uint ReadDoubleWordRWWEE(long offset) => _rwweeMemory.ReadDoubleWord(offset);
+        [ConnectionRegion("RWWEE")]
+        public void WriteByteRWWEE(long offset, byte value) => _interruptsManager.SetInterrupt(Interrupts.Error);
+        [ConnectionRegion("RWWEE")]
+        public void WriteWordRWWEE(long offset, ushort value) => _pageBuffer.Load(value);
+        [ConnectionRegion("RWWEE")]
+        public void WriteDoubleWordRWWEE(long offset, uint value) => this.WarningLog("32-bit write to pageBuffer not implemented.");
 
-        }
-        public void WriteWord(long offset, ushort value)
-        {
-            switch (_sector)
-            {
-                case Sector.MainArray:
-                case Sector.RWWEE:
-                case Sector.AUX:
-                    _pageBuffer.Load(value);
-                    break;
-                case Sector.Control:
-                    _wordRegisters.Write(offset, value);
-                    break;
-            }
-        }
-        public void WriteDoubleWord(long offset, uint value)
-        {
-            switch (_sector)
-            {
-                case Sector.MainArray:
-                case Sector.RWWEE:
-                case Sector.AUX:
-                    this.WarningLog("32-bit write to pageBuffer not implemented.");
-                    break;
-                case Sector.Control:
-                    _doubleWordRegisters.Write(offset, value);
-                    break;
-            }
-        }
+        [ConnectionRegion("AUX")]
+        public byte ReadByteAUX(long offset) => _auxMemory.ReadByte(offset);
+        [ConnectionRegion("AUX")]
+        public ushort ReadWordAUX(long offset) => _auxMemory.ReadWord(offset);
+        [ConnectionRegion("AUX")]
+        public uint ReadDoubleWordAUX(long offset) => _auxMemory.ReadDoubleWord(offset);
+        [ConnectionRegion("AUX")]
+        public void WriteByteAUX(long offset, byte value) => _interruptsManager.SetInterrupt(Interrupts.Error);
+        [ConnectionRegion("AUX")]
+        public void WriteWordAUX(long offset, ushort value) => _pageBuffer.Load(value);
+        [ConnectionRegion("AUX")]
+        public void WriteDoubleWordAUX(long offset, uint value) => this.WarningLog("32-bit write to pageBuffer not implemented.");
+
+
 
         public Saml22NVMCTRL(Machine machine)
         {
@@ -130,8 +72,8 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
 
             _rwweeMemory = new ArrayMemory(0x2000);
             Erase(_rwweeMemory);
-            _auxiliaryMemory = new ArrayMemory(0xA100);
-            Erase(_auxiliaryMemory);
+            _auxMemory = new ArrayMemory(0xA100);
+            Erase(_auxMemory);
 
             _pageBuffer = new PageBuffer(this);
 
@@ -153,7 +95,7 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         private readonly DoubleWordRegisterCollection _doubleWordRegisters;
         private readonly PageBuffer _pageBuffer;
         private readonly ArrayMemory _rwweeMemory;
-        private readonly ArrayMemory _auxiliaryMemory;
+        private readonly ArrayMemory _auxMemory;
 
         private Sector _sector;
         private Sector _memorySector;
@@ -232,10 +174,10 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
                         this.WarningLog("NVMCTRL can't operate on Main Array.");
                         break;
                     case Command.EAR:
-                        EraseRow(_auxiliaryMemory);
+                        EraseRow(_auxMemory);
                         break;
                     case Command.WAR:
-                        WriteToMemory(_auxiliaryMemory);
+                        WriteToMemory(_auxMemory);
                         break;
                     case Command.RWWEEER:
                         EraseRow(_rwweeMemory);
@@ -320,7 +262,7 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
                             _parent.WriteToMemory(_parent._rwweeMemory);
                             break;
                         case Sector.AUX:
-                            _parent.WriteToMemory(_parent._auxiliaryMemory);
+                            _parent.WriteToMemory(_parent._auxMemory);
                             break;
                     }
                 }

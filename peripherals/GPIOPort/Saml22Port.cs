@@ -21,10 +21,23 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             }
         }
 
-        public uint ReadDoubleWord(long offset) => ((Saml22PortGroup)_portsGroup[(int)(offset / GROUP_OFFSET)]).doubleWordRegisters.Read(offset % GROUP_OFFSET);
-        public void WriteDoubleWord(long offset, uint value) => ((Saml22PortGroup)_portsGroup[(int)(offset / GROUP_OFFSET)]).doubleWordRegisters.Write(offset % GROUP_OFFSET, value);
-        public byte ReadByte(long offset) => ((Saml22PortGroup)_portsGroup[(int)(offset / GROUP_OFFSET)]).byteRegisters.Read(offset % GROUP_OFFSET);
-        public void WriteByte(long offset, byte value) => ((Saml22PortGroup)_portsGroup[(int)(offset / GROUP_OFFSET)]).byteRegisters.Write(offset % GROUP_OFFSET, value);
+        public uint ReadDoubleWord(long offset)
+            => ((Saml22PortGroup)_portsGroup[(int)(offset / GROUP_OFFSET)]).doubleWordRegisters.Read(offset % GROUP_OFFSET);
+        public void WriteDoubleWord(long offset, uint value)
+            => ((Saml22PortGroup)_portsGroup[(int)(offset / GROUP_OFFSET)]).doubleWordRegisters.Write(offset % GROUP_OFFSET, value);
+        public byte ReadByte(long offset)
+            => ((Saml22PortGroup)_portsGroup[(int)(offset / GROUP_OFFSET)]).byteRegisters.Read(offset % GROUP_OFFSET);
+        public void WriteByte(long offset, byte value)
+            => ((Saml22PortGroup)_portsGroup[(int)(offset / GROUP_OFFSET)]).byteRegisters.Write(offset % GROUP_OFFSET, value);
+
+        [ConnectionRegion("IOBUS")]
+        public uint ReadDoubleWordIOBUS(long offset) => ReadDoubleWord(offset);
+        [ConnectionRegion("IOBUS")]
+        public void WriteDoubleWordIOBUS(long offset, uint value) => WriteDoubleWord(offset, value);
+        [ConnectionRegion("IOBUS")]
+        public byte ReadByteIOBUS(long offset) => ReadByte(offset);
+        [ConnectionRegion("IOBUS")]
+        public void WriteByteIOBUS(long offset, byte value) => WriteByte(offset, value);
 
         public void Register(IGPIOReceiver port, NumberRegistrationPoint<int> portNumber)
         {

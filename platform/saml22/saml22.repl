@@ -34,7 +34,7 @@ usb: USB.Saml22USB @ sysbus 0x41000000
 nvmctrl: MemoryControllers.Saml22NVMCTRL @ {
     sysbus 0x41004000;
     sysbus new Bus.BusMultiRegistration { address: 0x400000; size: 0x2000; region: "RWWEE" };
-    sysbus new Bus.BusMultiRegistration { address: 0x800000; size: 0xA100; region: "Auxiliary" }
+    sysbus new Bus.BusMultiRegistration { address: 0x800000; size: 0xA100; region: "AUX" }
 }
 
 tcc0: Timers.Saml22TCC @ sysbus 0x42001C00
