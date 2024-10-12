@@ -14,7 +14,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public Saml22OSCCTRL(Machine machine)
         {
-            this.WarningLog("OSCCTRL is a stub. Does nothing.");
             _machine = machine;
 
             _doubleWordRegisters = new DoubleWordRegisterCollection(this);
@@ -53,15 +52,21 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             break;
                     }
                 });
-
-            _osc16m.Enabled = true;
         }
 
+        // This allow to simulate the clock propagation at the power up stage.
+        public void StartOscillators()
+        {
+            _osc16m.Frequency = 4_000_000;
+        }
+
+        // Treat this as Power Reset
         public void Reset()
         {
             _doubleWordRegisters.Reset();
             _wordRegisters.Reset();
             _byteRegisters.Reset();
+            StartOscillators();
         }
 
         public byte ReadByte(long offset) => _byteRegisters.Read(offset);

@@ -11,7 +11,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
     {
         public Saml22MCLK(Machine machine, ISAML22GCLK gclk, NVIC nvic)
         {
-            this.WarningLog("MCLK is a stub. Does nothing.");
             _machine = machine;
             _nvic = nvic;
             _gclk = gclk;
@@ -36,10 +35,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             if (clock == SAML22GCLKClock.GCLK_MAIN)
             {
-                this.DebugLog($"[{clock}] changed.");
                 CLK_CPU = _gclk.GCLK_MAIN;
             }
-
         }
 
         public long Size => 0x400;
