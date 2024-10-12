@@ -13,12 +13,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public Saml22GCLK(Machine machine, ISAML22OSCCTRL oscctrl)
         {
-            this.WarningLog("GCLK is a stub. Does nothing.");
             _machine = machine;
             _oscctrl = oscctrl;
 
             _oscctrl.OSCClockChanged += ClockChanged;
-            this.InfoLog($"OSC16M initial freq: [{_oscctrl.OSC16M}]");
 
             _doubleWordRegisters = new DoubleWordRegisterCollection(this);
             _byteRegisters = new ByteRegisterCollection(this);
@@ -28,7 +26,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 { 0, new Generator(this, 0, Generator.ClockSource.OSC16M, true) }
             };
             _generators[0].FrequencyChanged += GeneratorFrequencyChanged;
-            _generators[0].SourceFrequency = _oscctrl.OSC16M;
             for (int i = 1; i < 5; i++)
             {
                 _generators.Add(i, new Generator(this, i));
@@ -52,7 +49,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private void GeneratorFrequencyChanged(int id)
         {
-            this.InfoLog($"GEN[{id}] changed frequency.");
             switch (id)
             {
                 case 0:
@@ -75,7 +71,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         {
                             generator.SourceFrequency = _oscctrl.OSC16M;
                         }
-
                     }
                     break;
             }

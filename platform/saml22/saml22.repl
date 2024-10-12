@@ -17,6 +17,8 @@ mclk: Miscellaneous.Saml22MCLK @ sysbus 0x40000800
     nvic: nvic
 
 oscctrl: Miscellaneous.Saml22OSCCTRL @ sysbus 0x40001000
+    init:
+        StartOscillators
 
 osc32kctrl: Miscellaneous.Saml22OSC32KCTRL @ sysbus 0x40001400
 
