@@ -1,5 +1,12 @@
 
 ### INCLUDES ###
+include @peripherals/Miscellaneous/ISAML22OSCCTRL.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22OSCClock"
+include @peripherals/Miscellaneous/ISAML22OSC32KCTRL.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22OSC32KClock"
+include @peripherals/Miscellaneous/ISAML22GCLK.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22GCLKClock"
+
 include @peripherals/Saml22MemoryMap.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Saml22MemoryMap"
 include @peripherals/Miscellaneous/Saml22RTC.cs
@@ -21,6 +28,7 @@ EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.Saml22PortGroup"
 include @peripherals/GPIOPort/Saml22Port.cs
 
 include @peripherals/Miscellaneous/Saml22SERCOM.cs
+include @peripherals/Mocks/DriverTest.cs
 
 mach create
 machine LoadPlatformDescription $ORIGIN/renode-platform/sensorwatch.repl
@@ -33,6 +41,12 @@ macro reset
     sysbus.cpu PC 0x3A65
 """
 
-sysbus LogPeripheralAccess sysbus.pm true
+# sysbus LogPeripheralAccess sysbus.osc32kctrl true
+# sysbus LogPeripheralAccess sysbus.oscctrl true
+# sysbus LogPeripheralAccess sysbus.mclk true
+# sysbus LogPeripheralAccess sysbus.gclk true
+sysbus LogPeripheralAccess sysbus.nvic true
+
+logLevel -1 sysbus.gclk
 
 start

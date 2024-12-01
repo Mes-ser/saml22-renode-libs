@@ -1,6 +1,8 @@
 ﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
+using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Antmicro.Renode.Peripherals.Miscellaneous;
 
 namespace Antmicro.Renode.Peripherals.IRQControllers
 {
@@ -27,13 +29,22 @@ namespace Antmicro.Renode.Peripherals.IRQControllers
             throw new System.NotImplementedException();
         }
 
-        public Saml22EIC(Machine machine)
+        public Saml22EIC(Machine machine, ISAML22GCLK gclk, ulong pchctrl)
         {
+            this.WarningLog("EIC is a stub. Does nothing.");
             _machine = machine;
+
+            gclk?.RegisterPeripheralChannelFrequencyChange(pchctrl, FreqChanged);
 
             _doubleWordRegisters = new DoubleWordRegisterCollection(this);
             _wordRegisters = new WordRegisterCollection(this);
             _byteRegisters = new ByteRegisterCollection(this);
+        }
+
+        private void FreqChanged(long frequency)
+        {
+            this.WarningLog("Clock isn't handled.");
+            this.DebugLog($"Frequency: [{frequency}]");
         }
 
         private readonly Machine _machine;

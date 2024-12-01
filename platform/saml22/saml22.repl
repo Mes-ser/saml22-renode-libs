@@ -26,12 +26,17 @@ supc: Miscellaneous.Saml22SUPC @ sysbus 0x40001800
 
 gclk: Miscellaneous.Saml22GCLK @ sysbus 0x40001C00
     oscctrl: oscctrl
+    osc32kctrl: osc32kctrl
 
 rtc: Miscellaneous.Saml22RTC @ sysbus 0x40002400
 
 eic: IRQControllers.Saml22EIC @ sysbus 0x40002800
+    gclk: gclk
+    pchctrl: 3
 
 usb: USB.Saml22USB @ sysbus 0x41000000
+    gclk: gclk
+    pchctrl: 6
 
 nvmctrl: MemoryControllers.Saml22NVMCTRL @ {
     sysbus 0x41004000;
@@ -44,11 +49,29 @@ tcc0: Timers.Saml22TCC @ sysbus 0x42001C00
 slcd: Miscellaneous.Saml22SLCD @ sysbus 0x42003C00
 
 sercom0: Miscellaneous.Saml22SERCOM @ sysbus 0x42000400
+    IRQ -> nvic@9
+    gclk: gclk
+    pchctrl: 16
 sercom1: Miscellaneous.Saml22SERCOM @ sysbus 0x42000800
+    IRQ -> nvic@10
+    gclk: gclk
+    pchctrl: 17
 sercom2: Miscellaneous.Saml22SERCOM @ sysbus 0x42000C00
+    IRQ -> nvic@11
+    gclk: gclk
+    pchctrl: 18
 sercom3: Miscellaneous.Saml22SERCOM @ sysbus 0x42001000
+    IRQ -> nvic@12
+    gclk: gclk
+    pchctrl: 19
 sercom4: Miscellaneous.Saml22SERCOM @ sysbus 0x42001400
+    IRQ -> nvic@13
+    gclk: gclk
+    pchctrl: 20
 sercom5: Miscellaneous.Saml22SERCOM @ sysbus 0x42001800
+    IRQ -> nvic@14
+    gclk: gclk
+    pchctrl: 21
 
 
 port: GPIOPort.Saml22Port @ {

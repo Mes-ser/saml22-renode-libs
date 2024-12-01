@@ -11,12 +11,13 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
     public class Saml22GCLK : IDoubleWordPeripheral, IBytePeripheral, IKnownSize, ISAML22GCLK
     {
 
-        public Saml22GCLK(Machine machine, ISAML22OSCCTRL oscctrl)
+        public Saml22GCLK(Machine machine, ISAML22OSCCTRL oscctrl, ISAML22OSC32KCTRL osc32kctrl)
         {
             _machine = machine;
             _oscctrl = oscctrl;
+            _osc32kctrl = osc32kctrl;
 
-            _oscctrl.OSCClockChanged += ClockChanged;
+            _oscctrl.OSCClockChanged += OSCClockChanged;
 
             _doubleWordRegisters = new DoubleWordRegisterCollection(this);
             _byteRegisters = new ByteRegisterCollection(this);
@@ -25,11 +26,18 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 { 0, new Generator(this, 0, Generator.ClockSource.OSC16M, true) }
             };
-            _generators[0].FrequencyChanged += GeneratorFrequencyChanged;
+            _generators[0].FrequencyChanged += (freq) => GCLKClockChanged?.Invoke(SAML22GCLKClock.GCLK_MAIN);
+
             for (int i = 1; i < 5; i++)
             {
                 _generators.Add(i, new Generator(this, i));
-                _generators[i].FrequencyChanged += GeneratorFrequencyChanged;
+            }
+
+            _peripheralChannelsControl = new Dictionary<int, PeripheralChannelControl>();
+
+            for (int i = 0; i < 29; i++)
+            {
+                _peripheralChannelsControl.Add(i, new PeripheralChannelControl(this, i));
             }
 
             DefineRegisters();
@@ -40,6 +48,14 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             _doubleWordRegisters.Reset();
             _byteRegisters.Reset();
+
+            // TODO: Add PCHCTRL.Reset
+            // TODO: Add Generator.Reset 
+        }
+        private void SoftwareReset()
+        {
+            // TODO: Add PCHCTRL.SoftwareReset
+            // TODO: Add Generator.SoftwareReset
         }
 
         public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
@@ -47,33 +63,67 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public byte ReadByte(long offset) => _byteRegisters.Read(offset);
         public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
-        private void GeneratorFrequencyChanged(int id)
-        {
-            switch (id)
-            {
-                case 0:
-                    GCLKClockChanged?.Invoke(SAML22GCLKClock.GCLK_MAIN);
-                    break;
-                default:
-                    this.WarningLog($"Unhandled GEN[{id}] change.");
-                    break;
-            }
-        }
-
-        private void ClockChanged(SAML22OSCClock clock)
+        private void OSCClockChanged(SAML22OSCClock clock)
         {
             switch (clock)
             {
                 case SAML22OSCClock.OSC16M:
-                    foreach (Generator generator in _generators.Values)
-                    {
-                        if ((Generator.ClockSource)generator.SRC == Generator.ClockSource.OSC16M)
-                        {
-                            generator.SourceFrequency = _oscctrl.OSC16M;
-                        }
-                    }
+                    OSC16MFreqChanged?.Invoke(_oscctrl.OSC16M);
+                    break;
+                default:
+                    this.WarningLog($"Unhandled Clock source [{clock}]");
                     break;
             }
+        }
+
+        private void RegisterClockChangeHandler(Generator.ClockSource clkSrc, Action<long> handler)
+        {
+            switch (clkSrc)
+            {
+                case Generator.ClockSource.XOSC:
+                    XOSC32KFreqChanged += handler;
+                    break;
+                case Generator.ClockSource.OSC16M:
+                    OSC16MFreqChanged += handler;
+                    break;
+                default:
+                    this.WarningLog($"Cannot Register Unknown Generator Clock Source: [{clkSrc}]");
+                    break;
+            }
+        }
+
+        private void UnregisterClockChangeHandler(Generator.ClockSource clkSrc, Action<long> handler)
+        {
+            switch (clkSrc)
+            {
+                case Generator.ClockSource.XOSC:
+                    XOSC32KFreqChanged -= handler;
+                    break;
+                case Generator.ClockSource.OSC16M:
+                    OSC16MFreqChanged -= handler;
+                    break;
+                default:
+                    this.WarningLog($"Cannot Unregister Unknown Generator Clock Source: [{clkSrc}]");
+                    break;
+            }
+        }
+
+        private long GetFrequencyFromClock(Generator.ClockSource clk)
+        {
+            switch (clk)
+            {
+                case Generator.ClockSource.XOSC32K:
+                    return _osc32kctrl.XOSC32K;
+                case Generator.ClockSource.OSC16M:
+                    return _oscctrl.OSC16M;
+                default:
+                    this.WarningLog($"Can't get frequency from unknown clock: [{clk}]");
+                    return 0;
+            }
+        }
+        public void RegisterPeripheralChannelFrequencyChange(ulong id, Action<long> handler)
+        {
+            _peripheralChannelsControl[(int)id].RegisterFreqChangeHandler(handler);
         }
 
         private void DefineRegisters()
@@ -103,21 +153,60 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: (_) => _generators[0].RUNSTDBY)
                 .WithValueField(16, 8, writeCallback: (old, value) => _generators[0].DIV = (long)value,
                     valueProviderCallback: (_) => (ulong)_generators[0].DIV);
+
+            _doubleWordRegisters.DefineRegister((long)Registers.GENCTRL3)
+                .WithValueField(0, 4, writeCallback: (old, value) => _generators[3].SRC = value,
+                    valueProviderCallback: (_) => _generators[3].SRC)
+                .WithFlag(8, writeCallback: (old, value) => _generators[3].GENEN = value,
+                    valueProviderCallback: (_) => _generators[3].GENEN)
+                .WithFlag(9, writeCallback: (old, value) => _generators[3].IDC = value,
+                    valueProviderCallback: (_) => _generators[3].IDC)
+                .WithFlag(10, writeCallback: (old, value) => _generators[3].OOV = value,
+                    valueProviderCallback: (_) => _generators[3].OOV)
+                .WithFlag(11, writeCallback: (old, value) => _generators[3].OE = value,
+                    valueProviderCallback: (_) => _generators[3].OE)
+                .WithFlag(12, writeCallback: (old, value) => _generators[3].DIVSEL = value,
+                    valueProviderCallback: (_) => _generators[3].DIVSEL)
+                .WithFlag(13, writeCallback: (old, value) => _generators[3].RUNSTDBY = value,
+                    valueProviderCallback: (_) => _generators[3].RUNSTDBY)
+                .WithValueField(16, 8, writeCallback: (old, value) => _generators[3].DIV = (long)value,
+                    valueProviderCallback: (_) => (ulong)_generators[3].DIV);
+
+            _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL15)
+                .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[15].WriteConfig,
+                    valueProviderCallback: _peripheralChannelsControl[15].ReadConfig
+                );
+            _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL20)
+                .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[20].WriteConfig,
+                    valueProviderCallback: _peripheralChannelsControl[20].ReadConfig
+                );
         }
 
         public event Action<SAML22GCLKClock> GCLKClockChanged;
         private readonly Machine _machine;
         private readonly Dictionary<int, Generator> _generators;
+        private readonly Dictionary<int, PeripheralChannelControl> _peripheralChannelsControl;
         private readonly DoubleWordRegisterCollection _doubleWordRegisters;
         private readonly ByteRegisterCollection _byteRegisters;
         private readonly ISAML22OSCCTRL _oscctrl;
+        private readonly ISAML22OSC32KCTRL _osc32kctrl;
 
         public long Size => 0x400;
 
         public long GCLK_MAIN => _generators[0].Frequency;
-        public long GCLK_DFLL46M_REF => throw new NotImplementedException();
-        public long GCLK_FDPLL => throw new NotImplementedException();
-        public long GCLK_FDPLL_32K => throw new NotImplementedException();
+        public long GCLK_DFLL46M_REF => _peripheralChannelsControl[0].Frequency;
+        public long GCLK_FDPLL => _peripheralChannelsControl[1].Frequency;
+        public long GCLK_FDPLL_32K => _peripheralChannelsControl[2].Frequency;
+
+        private Action<long> XOSCFreqChanged;
+        private Action<long> GCLK_INFreqChanged;
+        private Action<long> GCLK_GEN1FreqChanged;
+        private Action<long> OSCULP32KFreqChanged;
+        private Action<long> XOSC32KFreqChanged;
+        private Action<long> OSC16MFreqChanged;
+        private Action<long> DFLL48MFreqChanged;
+        private Action<long> DFLL96MFreqChanged;
+
 
         private enum Registers
         {
@@ -166,9 +255,15 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 _gclk = gclk;
                 ID = id;
                 _src = source;
+                _gclk.RegisterClockChangeHandler(_src, ClockFreqChange);
                 _enable = enabledByDefault;
                 _defaultSource = source;
                 _enabledByDefault = enabledByDefault;
+            }
+
+            private void ClockFreqChange(long frequency)
+            {
+                SourceFrequency = frequency;
             }
 
             public void Reset(bool soft = true)
@@ -189,11 +284,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 {
                     if (_divSelection)
                     {
-                        Frequency = (long)(_sourceFrequency / Math.Pow(_divisionFactor, 2));
+                        Frequency = (long)(SourceFrequency / Math.Pow(_divisionFactor, 2));
                     }
                     else
                     {
-                        Frequency = _sourceFrequency / _divisionFactor;
+                        Frequency = SourceFrequency / _divisionFactor;
                     }
                 }
                 else
@@ -206,9 +301,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
             public long SourceFrequency
             {
+                get => _gclk.GetFrequencyFromClock(_src);
                 set
                 {
-                    _gclk.DebugLog($"Generator [{ID}] source frequency changed [{value}Hz]");
                     _sourceFrequency = value;
                     UpdateFrequency();
                 }
@@ -220,9 +315,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 {
                     if (_frequency != value)
                     {
-                        _gclk.DebugLog($"Generator [{ID}] frequency changed [{value}Hz]");
                         _frequency = value;
-                        FrequencyChanged?.Invoke(ID);
+                        FrequencyChanged?.Invoke(_frequency);
                     }
                 }
             }
@@ -234,6 +328,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 {
                     if (value != (ulong)_src)
                     {
+                        _gclk.UnregisterClockChangeHandler(_src, ClockFreqChange);
+                        _gclk.RegisterClockChangeHandler(_src, ClockFreqChange);
                         _src = (ClockSource)value;
                         UpdateFrequency();
                     }
@@ -306,7 +402,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 }
             }
 
-            public event Action<int> FrequencyChanged;
+            public event Action<long> FrequencyChanged;
 
             private readonly Saml22GCLK _gclk;
             private readonly ClockSource _defaultSource;
@@ -335,11 +431,128 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             }
         }
 
-        private class ChannelControl
+        private class PeripheralChannelControl
         {
-            public ChannelControl()
-            {
 
+            public int ID { get; private set; }
+            public PeripheralChannelControl(Saml22GCLK gclk, int id)
+            {
+                _gclk = gclk;
+                ID = id;
+                _gclk._generators[0].FrequencyChanged += GenFrequencyChangeHandler;
+            }
+
+            public void WriteConfig(ulong old, ulong value)
+            {
+                WRTLOCK = BitHelper.IsBitSet(value, (byte)ControlBit.WRTLOCK);
+                if (!WRTLOCK)
+                {
+                    GEN = (byte)((value & 0xF) >> (byte)ControlBit.GEN);
+                    CHEN = BitHelper.IsBitSet(value, (byte)ControlBit.CHEN);
+                }
+            }
+
+            public ulong ReadConfig(ulong _)
+            {
+                ulong reg = 0;
+                BitHelper.SetBit(ref reg, (byte)ControlBit.WRTLOCK, WRTLOCK);
+                BitHelper.SetBit(ref reg, (byte)ControlBit.CHEN, CHEN);
+                reg |= (ulong)GEN << (byte)ControlBit.GEN;
+                return reg;
+            }
+
+            public void Reset()
+            {
+                WRTLOCK = false;
+                CHEN = false;
+                GEN = 0x0;
+            }
+            public void SoftwareReset()
+            {
+                if (WRTLOCK)
+                    return;
+                Reset();
+            }
+
+            public void RegisterFreqChangeHandler(Action<long> handler)
+            {
+                UnregisterFreqChangeHandler(handler);
+                _frequencyChanged += handler;
+            }
+
+            public void UnregisterFreqChangeHandler(Action<long> handler)
+            {
+                _frequencyChanged -= handler;
+            }
+
+            private void GenFrequencyChangeHandler(long frequency)
+            {
+                Frequency = frequency;
+            }
+
+            private byte GEN
+            {
+                get => _gen;
+                set
+                {
+                    if (value != _gen)
+                    {
+                        _gen = value;
+                        _gclk._generators[_gen].FrequencyChanged -= GenFrequencyChangeHandler;
+                        Frequency = SourceFrequency;
+                    }
+                }
+            }
+
+            private byte _gen;
+            private bool CHEN
+            {
+                get => _chen;
+                set
+                {
+                    if (value != _chen)
+                    {
+                        _chen = value;
+                        if (_chen)
+                        {
+                            Frequency = SourceFrequency;
+                        }
+                        else
+                        {
+                            Frequency = 0;
+                        }
+                    }
+                }
+            }
+            private bool _chen;
+            private bool WRTLOCK { get; set; }
+
+            public long Frequency
+            {
+                get => _frequency;
+                private set
+                {
+                    if (value != _frequency)
+                    {
+                        _frequency = value;
+                        _frequencyChanged?.Invoke(_frequency);
+                    }
+                }
+            }
+
+            private long SourceFrequency => _gclk._generators[_gen].Frequency;
+
+            private long _frequency;
+
+            private Action<long> _frequencyChanged;
+
+            private readonly Saml22GCLK _gclk;
+
+            private enum ControlBit
+            {
+                GEN = 0,
+                CHEN = 6,
+                WRTLOCK = 7
             }
         }
     }

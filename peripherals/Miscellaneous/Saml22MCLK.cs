@@ -18,8 +18,27 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
             _doubleWordRegisters = new DoubleWordRegisterCollection(this);
             _byteRegisters = new ByteRegisterCollection(this);
+
+            _doubleWordRegisters.DefineRegister((long)Registers.APBCMask)
+                .WithFlags(0, 19, writeCallback: (flag, old, value) =>
+                {
+                    IPeripheral perip = _machine.SystemBus.WhatPeripheralIsAt((ulong)(0x42000000 + (0x400 * flag)));
+                    if (perip != null)
+                        _machine.SystemBus.SetPeripheralEnabled(perip, value);
+                },
+                valueProviderCallback: (flag, _) =>
+                {
+                    IPeripheral perip = _machine.SystemBus.WhatPeripheralIsAt((ulong)(0x42000000 + (0x400 * flag)));
+                    if (perip != null)
+                    {
+                        return _machine.SystemBus.IsPeripheralEnabled(perip);
+                    }
+                    return false;
+                }
+            );
         }
 
+        // Power Reset
         public void Reset()
         {
             _doubleWordRegisters.Reset();

@@ -2,6 +2,8 @@
 
 include @peripherals/Miscellaneous/ISAML22OSCCTRL.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22OSCClock"
+include @peripherals/Miscellaneous/ISAML22OSC32KCTRL.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22OSC32KClock"
 include @peripherals/Miscellaneous/ISAML22GCLK.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22GCLKClock"
 
@@ -31,6 +33,12 @@ include @peripherals/Mocks/DriverTest.cs
 mach create "saml22-xplained-pro"
 machine LoadPlatformDescription $ORIGIN/renode-platform/saml22_xplained_pro.repl
 
-sysbus LoadELF $CWD/../saml22-base-project/build/firmware.elf
+sysbus LoadELF $CWD/../saml22-base-project/app/build/app.elf
+sysbus LoadELF $CWD/../saml22-base-project/bootloader/build/bootloader.elf
 
+logLevel -1 sysbus.port.pc.user_led_0
+
+sysbus LogPeripheralAccess sysbus.gclk true
+
+sysbus LogPeripheralAccess sysbus.mclk true
 machine StartGdbServer 3334 false

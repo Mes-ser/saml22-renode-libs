@@ -10,6 +10,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         long GCLK_FDPLL_32K { get; }
 
         event Action<SAML22GCLKClock> GCLKClockChanged;
+
+        void RegisterPeripheralChannelFrequencyChange(ulong id, Action<long> handler);
     }
 
     public enum SAML22GCLKClock

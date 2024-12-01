@@ -1,9 +1,7 @@
 ﻿using System;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
-using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
-using Antmicro.Renode.Peripherals.Timers;
 using Antmicro.Renode.Time;
 using Antmicro.Renode.Utilities;
 
@@ -20,12 +18,23 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             _wordRegisters = new WordRegisterCollection(this);
             _byteRegisters = new ByteRegisterCollection(this);
 
-            _interruptManager = new InterruptManager<Interrupts>(this);
+            _interruptManager = new InterruptManager<Interrupt>(this);
 
-            _osc16m = new Crystal(this, 4_000_000, true);
-            _osc16m.OSCReady += OSCReadyChange;
+            _osc16m = new Crystal(this, 4_000_000, SAML22OSCClock.OSC16M, true);
+            _osc16m.OSCReadyState += OSCReadyChange;
 
-            _doubleWordRegisters.DefineRegister((long)Registers.STATUS, 0x111); // TODO: temporary solution
+            _xosc = new Crystal(this, 0, SAML22OSCClock.XOSC);
+            _xosc.OSCReadyState += OSCReadyChange;
+
+            _doubleWordRegisters.DefineRegister((long)Registers.STATUS, 0x100)
+                .WithFlag(0, FieldMode.Read, valueProviderCallback: (_) => _xosc.Ready)
+                .WithFlag(4, FieldMode.Read, valueProviderCallback: (_) => _osc16m.Ready);
+
+            _wordRegisters.DefineRegister((long)Registers.XOSCCTRL, 0x80)
+                .WithFlag(1, writeCallback: (oldValue, newValue) => _xosc.Enabled = newValue,
+                    valueProviderCallback: (_) => _xosc.Enabled)
+                .WithValueField(12, 4, writeCallback: (_, value) => _xosc.StartUpCycles = (ulong)Math.Pow(2, value),
+                valueProviderCallback: (_) => (ulong)Math.Sqrt(_xosc.StartUpCycles));
 
             _byteRegisters.DefineRegister((long)Registers.OSC16MCTRL, 0x81)
                 .WithFlag(1, writeCallback: (oldValue, newValue) => _osc16m.Enabled = newValue,
@@ -91,19 +100,21 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public long Size => 0x400;
         [IrqProvider]
         public GPIO IRQ { get; } = new GPIO();
-        public long XOSCFrequency
+
+        public long XOSC
         {
-            get => _xosc.Frequency;
+            get
+            {
+                if (_xosc != null)
+                    return _xosc.Frequency;
+                return 0;
+            }
             set
             {
-                if (_xosc == null && value > 0)
-                    _xosc = new Crystal(this, value);
                 if (_xosc != null && value > 0)
                     _xosc.Frequency = value;
             }
         }
-
-        public long XOSC { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         public long OSC16M => _osc16m.Frequency;
 
@@ -116,7 +127,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private readonly WordRegisterCollection _wordRegisters;
         private readonly DoubleWordRegisterCollection _doubleWordRegisters;
 
-        private readonly InterruptManager<Interrupts> _interruptManager;
+        private readonly InterruptManager<Interrupt> _interruptManager;
         private Crystal _xosc;
         private readonly Crystal _dfll48m;
         private readonly Crystal _osc16m;
@@ -125,7 +136,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public event Action<SAML22OSCClock> OSCClockChanged;
 
         [Flags]
-        private enum Interrupts
+        private enum Interrupt
         {
             XOSCRDY = 0,
             XOSCFAIL = 1,
@@ -170,32 +181,25 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private sealed class Crystal
         {
 
-            public Crystal(Saml22OSCCTRL saml22oscctrl, long startFrequency, bool enabledByDefault = false)
+            public Crystal(Saml22OSCCTRL oscctrl, long startFrequency, SAML22OSCClock osc, bool enabledByDefault = false)
             {
-                _saml22oscctrl = saml22oscctrl;
+                _oscctrl = oscctrl;
+                _osc = osc;
                 _frequency = startFrequency;
                 _enabledByDefault = enabledByDefault;
                 _enabled = enabledByDefault;
-                _startUp = new LimitTimer(_saml22oscctrl._machine.ClockSource,
-                    startFrequency, _saml22oscctrl,
-                    "Oscillator Startup", 32768,
-                    workMode: WorkMode.OneShot, eventEnabled: true, direction: Direction.Ascending);
-                if (!_enabledByDefault)
-                    _startUp.LimitReached += StartUpTask;
-
             }
 
             public void Reset()
             {
                 _enabled = _enabledByDefault;
                 if (_enabledByDefault)
-                    OSCReady?.Invoke(SAML22OSCClock.OSC16M, true);
+                    Ready = true;
             }
 
             private void StartUpTask()
             {
                 Ready = true;
-                OSCReady?.Invoke(SAML22OSCClock.OSC16M, true);
             }
 
             public bool Enabled
@@ -205,7 +209,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 {
                     if (!_enabled && value)
                     {
-                        _startUp.Enabled = true;
+                        _oscctrl._machine.ScheduleAction(TimeInterval.FromMicroseconds((1000000 / 32786) * _startUpCycles),
+                        (_) => StartUpTask());
                     }
                     _enabled = value;
                 }
@@ -221,28 +226,50 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 }
                 set
                 {
+                    Ready = false;
+                    if (_frequency == 0 && value > 0)
+                    {
+                        StartUpTask();
+                    }
+                    else
+                    {
+                        Ready = true;
+                    }
                     _frequency = value;
-                    OSCReady?.Invoke(SAML22OSCClock.OSC16M, true);
                 }
             }
 
-            public bool Ready { get; private set; }
-
-            public ulong StartUpTime
+            public bool Ready
             {
+                get => _ready;
                 set
                 {
-                    _startUp.Limit = value;
+                    if (_ready != value)
+                    {
+                        OSCReadyState?.Invoke(_osc, value);
+                    }
+                    _ready = value;
+                }
+            }
+            private bool _ready;
+
+            public ulong StartUpCycles
+            {
+                get => _startUpCycles;
+                set
+                {
+                    _startUpCycles = value;
                 }
             }
 
-            private readonly Saml22OSCCTRL _saml22oscctrl;
-            private readonly LimitTimer _startUp;
+            private readonly Saml22OSCCTRL _oscctrl;
+            private readonly SAML22OSCClock _osc;
+            private ulong _startUpCycles;
             private readonly bool _enabledByDefault;
             private long _frequency;
             private bool _enabled;
 
-            public event Action<SAML22OSCClock, bool> OSCReady;
+            public event Action<SAML22OSCClock, bool> OSCReadyState;
         }
     }
 }
