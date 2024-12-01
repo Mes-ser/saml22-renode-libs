@@ -45,6 +45,8 @@ nvmctrl: MemoryControllers.Saml22NVMCTRL @ {
 }
 
 tcc0: Timers.Saml22TCC @ sysbus 0x42001C00
+    gclk: gclk
+    pchctrl: 22
 
 slcd: Miscellaneous.Saml22SLCD @ sysbus 0x42003C00
 

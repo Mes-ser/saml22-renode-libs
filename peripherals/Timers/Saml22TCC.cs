@@ -1,6 +1,8 @@
 ﻿using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
+using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Antmicro.Renode.Peripherals.Miscellaneous;
 using Antmicro.Renode.Utilities;
 
 namespace Antmicro.Renode.Peripherals.Timers
@@ -25,14 +27,23 @@ namespace Antmicro.Renode.Peripherals.Timers
         public byte ReadByte(long offset) => _byteRegisters.Read(offset);
         public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
-        public Saml22TCC(Machine machine)
+        public Saml22TCC(Machine machine, ISAML22GCLK gclk, ulong pchctrl)
         {
             _machine = machine;
+
+            gclk?.RegisterPeripheralChannelFrequencyChange(pchctrl, FreqChanged);
+
             _interruptsManager = new InterruptManager<Interrupts>(this);
 
-            _doubleWordRegisters = new DoubleWordRegisterCollection(this);
+            _doubleWordRegisters = new DoubleWordRegisterCollection(this);  
             _wordRegisters = new WordRegisterCollection(this);
             _byteRegisters = new ByteRegisterCollection(this);
+        }
+
+        private void FreqChanged(long frequency)
+        {
+            this.WarningLog("Clock isn't handled.");
+            this.DebugLog($"Frequency: [{frequency}]");
         }
 
         private readonly Machine _machine;
