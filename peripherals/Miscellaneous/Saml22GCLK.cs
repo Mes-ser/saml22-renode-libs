@@ -172,6 +172,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(16, 8, writeCallback: (old, value) => _generators[3].DIV = (long)value,
                     valueProviderCallback: (_) => (ulong)_generators[3].DIV);
 
+            _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL3)
+                .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[3].WriteConfig,
+                    valueProviderCallback: _peripheralChannelsControl[3].ReadConfig
+                );
+
             _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL15)
                 .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[15].WriteConfig,
                     valueProviderCallback: _peripheralChannelsControl[15].ReadConfig
@@ -179,6 +184,16 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL20)
                 .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[20].WriteConfig,
                     valueProviderCallback: _peripheralChannelsControl[20].ReadConfig
+                );
+
+            _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL22)
+                .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[22].WriteConfig,
+                    valueProviderCallback: _peripheralChannelsControl[22].ReadConfig
+                );
+
+            _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL25)
+                .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[25].WriteConfig,
+                    valueProviderCallback: _peripheralChannelsControl[25].ReadConfig
                 );
         }
 
@@ -456,8 +471,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 ulong reg = 0;
                 BitHelper.SetBit(ref reg, (byte)ControlBit.WRTLOCK, WRTLOCK);
-                BitHelper.SetBit(ref reg, (byte)ControlBit.CHEN, CHEN);
                 reg |= (ulong)GEN << (byte)ControlBit.GEN;
+                BitHelper.SetBit(ref reg, (byte)ControlBit.CHEN, CHEN);
                 return reg;
             }
 
@@ -487,7 +502,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
             private void GenFrequencyChangeHandler(long frequency)
             {
-                Frequency = frequency;
+                if (CHEN)
+                    Frequency = frequency;
             }
 
             private byte GEN
@@ -499,7 +515,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     {
                         _gen = value;
                         _gclk._generators[_gen].FrequencyChanged -= GenFrequencyChangeHandler;
-                        Frequency = SourceFrequency;
+                        if (CHEN)
+                            Frequency = SourceFrequency;
                     }
                 }
             }
