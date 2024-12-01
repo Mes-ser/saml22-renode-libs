@@ -2,6 +2,7 @@
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Antmicro.Renode.Peripherals.Miscellaneous;
 
 namespace Antmicro.Renode.Peripherals.Analog
 {
@@ -23,10 +24,12 @@ namespace Antmicro.Renode.Peripherals.Analog
         public byte ReadByte(long offset) => _byteRegisters.Read(offset);
         public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
 
-        public Saml22ADC(Machine machine)
+        public Saml22ADC(Machine machine, ISAML22GCLK gclk, ulong pchctrl)
         {
             this.WarningLog("ADC is a stub. Does nothing.");
             _machine = machine;
+
+            gclk?.RegisterPeripheralChannelFrequencyChange(pchctrl, FreqChanged);
 
             _doubleWordRegisters = new DoubleWordRegisterCollection(this);
             _wordRegisters = new WordRegisterCollection(this);
@@ -34,6 +37,12 @@ namespace Antmicro.Renode.Peripherals.Analog
 
             _byteRegisters.DefineRegister((long)Registers.InterruptFlagStatusandClear, 0x1);
 
+        }
+
+        private void FreqChanged(long frequency)
+        {
+            this.WarningLog("Clock isn't handled.");
+            this.DebugLog($"Frequency: [{frequency}]");
         }
 
         private readonly Machine _machine;

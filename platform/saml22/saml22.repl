@@ -82,3 +82,5 @@ pa: GPIOPort.Saml22PortGroup @ port 0
 pb: GPIOPort.Saml22PortGroup @ port 1
 
 adc: Analog.Saml22ADC @ sysbus 0x42003000
+    gclk: gclk
+    pchctrl: 25
