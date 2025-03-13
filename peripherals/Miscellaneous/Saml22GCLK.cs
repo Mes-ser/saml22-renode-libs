@@ -116,6 +116,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     return _osc32kctrl.XOSC32K;
                 case Generator.ClockSource.OSC16M:
                     return _oscctrl.OSC16M;
+                case Generator.ClockSource.DFLL96M:
+                    return _oscctrl.FDPLL96M;
                 default:
                     this.WarningLog($"Can't get frequency from unknown clock: [{clk}]");
                     return 0;
@@ -154,6 +156,24 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(16, 8, writeCallback: (old, value) => _generators[0].DIV = (long)value,
                     valueProviderCallback: (_) => (ulong)_generators[0].DIV);
 
+            _doubleWordRegisters.DefineRegister((long)Registers.GENCTRL1)
+                .WithValueField(0, 4, writeCallback: (old, value) => _generators[1].SRC = value,
+                    valueProviderCallback: (_) => _generators[1].SRC)
+                .WithFlag(8, writeCallback: (old, value) => _generators[1].GENEN = value,
+                    valueProviderCallback: (_) => _generators[1].GENEN)
+                .WithFlag(9, writeCallback: (old, value) => _generators[1].IDC = value,
+                    valueProviderCallback: (_) => _generators[1].IDC)
+                .WithFlag(10, writeCallback: (old, value) => _generators[1].OOV = value,
+                    valueProviderCallback: (_) => _generators[1].OOV)
+                .WithFlag(11, writeCallback: (old, value) => _generators[1].OE = value,
+                    valueProviderCallback: (_) => _generators[1].OE)
+                .WithFlag(12, writeCallback: (old, value) => _generators[1].DIVSEL = value,
+                    valueProviderCallback: (_) => _generators[1].DIVSEL)
+                .WithFlag(13, writeCallback: (old, value) => _generators[1].RUNSTDBY = value,
+                    valueProviderCallback: (_) => _generators[1].RUNSTDBY)
+                .WithValueField(16, 8, writeCallback: (old, value) => _generators[1].DIV = (long)value,
+                    valueProviderCallback: (_) => (ulong)_generators[1].DIV);
+
             _doubleWordRegisters.DefineRegister((long)Registers.GENCTRL3)
                 .WithValueField(0, 4, writeCallback: (old, value) => _generators[3].SRC = value,
                     valueProviderCallback: (_) => _generators[3].SRC)
@@ -172,6 +192,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(16, 8, writeCallback: (old, value) => _generators[3].DIV = (long)value,
                     valueProviderCallback: (_) => (ulong)_generators[3].DIV);
 
+            _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL1)
+                .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[1].WriteConfig,
+                    valueProviderCallback: _peripheralChannelsControl[1].ReadConfig
+                );
+
             _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL3)
                 .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[3].WriteConfig,
                     valueProviderCallback: _peripheralChannelsControl[3].ReadConfig
@@ -184,6 +209,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL20)
                 .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[20].WriteConfig,
                     valueProviderCallback: _peripheralChannelsControl[20].ReadConfig
+                );
+
+            _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL21)
+                .WithValueField(0, 32, writeCallback: _peripheralChannelsControl[21].WriteConfig,
+                    valueProviderCallback: _peripheralChannelsControl[21].ReadConfig
                 );
 
             _doubleWordRegisters.DefineRegister((long)Registers.PCHCTRL22)
