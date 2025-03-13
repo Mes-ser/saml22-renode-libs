@@ -61,6 +61,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             break;
                     }
                 });
+
+            _byteRegisters.DefineRegister((long)Registers.DPLLSTATUS, 0x3);
         }
 
         // This allow to simulate the clock propagation at the power up stage.
@@ -120,7 +122,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public long DFLL48M => throw new NotImplementedException();
 
-        public long FDPLL96M => throw new NotImplementedException();
+        public long FDPLL96M => 96000000;
 
         private readonly Machine _machine;
         private readonly ByteRegisterCollection _byteRegisters;
