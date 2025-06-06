@@ -1,0 +1,27 @@
+:name: Sensor Watch SAML22
+
+
+include @platform/saml22/saml22_includes.resc
+
+include @peripherals/Mocks/DriverTest.cs
+
+mach create "sensor-watch"
+machine LoadPlatformDescription $ORIGIN/renode-platform/sensorwatch.repl
+
+sysbus LoadELF @../Sensor-Watch/movement/make/build/watch.elf
+
+macro reset
+"""
+    sysbus.cpu SP 0x200037F0
+    sysbus.cpu PC 0x3A65
+"""
+
+# sysbus LogPeripheralAccess sysbus.osc32kctrl true
+# sysbus LogPeripheralAccess sysbus.oscctrl true
+# sysbus LogPeripheralAccess sysbus.mclk true
+# sysbus LogPeripheralAccess sysbus.gclk true
+sysbus LogPeripheralAccess sysbus.nvic true
+
+logLevel -1 sysbus.gclk
+
+start
