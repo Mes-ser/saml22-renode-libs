@@ -311,7 +311,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 SourceFrequency = frequency;
             }
 
-            public void Reset(bool soft = true)
+            public void Reset()
             {
                 _enable = _enabledByDefault;
                 _src = _defaultSource;
@@ -489,6 +489,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
             public void WriteConfig(ulong old, ulong value)
             {
+                _ = old;
                 WRTLOCK = BitHelper.IsBitSet(value, (byte)ControlBit.WRTLOCK);
                 if (!WRTLOCK)
                 {

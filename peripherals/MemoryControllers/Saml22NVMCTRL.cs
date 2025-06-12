@@ -48,11 +48,25 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         [ConnectionRegion("RWWEE")]
         public uint ReadDoubleWordRWWEE(long offset) => _rwweeMemory.ReadDoubleWord(offset);
         [ConnectionRegion("RWWEE")]
-        public void WriteByteRWWEE(long offset, byte value) => _interruptsManager.SetInterrupt(Interrupts.Error);
+        public void WriteByteRWWEE(long offset, byte value)
+        {
+            _ = offset;
+            _ = value;
+            _interruptsManager.SetInterrupt(Interrupts.Error);
+        }
         [ConnectionRegion("RWWEE")]
-        public void WriteWordRWWEE(long offset, ushort value) => _pageBuffer.Load(value);
+        public void WriteWordRWWEE(long offset, ushort value)
+        {
+            _ = offset;
+            _pageBuffer.Load(value);
+        }
         [ConnectionRegion("RWWEE")]
-        public void WriteDoubleWordRWWEE(long offset, uint value) => this.WarningLog("32-bit write to pageBuffer not implemented.");
+        public void WriteDoubleWordRWWEE(long offset, uint value)
+        {
+            _ = offset;
+            _ = value;
+            this.WarningLog("32-bit write to pageBuffer not implemented.");
+        }
 
         [ConnectionRegion("AUX")]
         public byte ReadByteAUX(long offset) => _auxMemory.ReadByte(offset);
@@ -61,12 +75,26 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
         [ConnectionRegion("AUX")]
         public uint ReadDoubleWordAUX(long offset) => _auxMemory.ReadDoubleWord(offset);
         [ConnectionRegion("AUX")]
-        public void WriteByteAUX(long offset, byte value) => _interruptsManager.SetInterrupt(Interrupts.Error);
+        public void WriteByteAUX(long offset, byte value)
+        {
+            _ = offset;
+            _ = value;
+            _interruptsManager.SetInterrupt(Interrupts.Error);
+        }
         [ConnectionRegion("AUX")]
-        public void WriteWordAUX(long offset, ushort value) => _pageBuffer.Load(value);
+        public void WriteWordAUX(long offset, ushort value)
+        {
+            _ = offset;
+            _ = value;
+            _pageBuffer.Load(value);
+        }
         [ConnectionRegion("AUX")]
-        public void WriteDoubleWordAUX(long offset, uint value) => this.WarningLog("32-bit write to pageBuffer not implemented.");
-
+        public void WriteDoubleWordAUX(long offset, uint value)
+        {
+            _ = offset;
+            _ = value;
+            this.WarningLog("32-bit write to pageBuffer not implemented.");
+        }
 
         public void SetAbsoluteAddress(ulong address)
         {
