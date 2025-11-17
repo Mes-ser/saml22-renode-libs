@@ -1,0 +1,16 @@
+using "../saml22.repl"
+
+sercom4: UART.Saml22USART @ sysbus 0x42001400
+    IRQ -> nvic@13
+    gclk: gclk
+    pchctrl: 20
+
+sercom5: Miscellaneous.Saml22SERCOM @ sysbus 0x42001800
+    IRQ -> nvic@14
+    gclk: gclk
+    pchctrl: 21
+
+aux: Memory.MappedMemory @ nvmctrl 0x800000
+    size: 0xA050
+
+IOGroupC: GPIOPort.Saml22PortGroup @ port 2

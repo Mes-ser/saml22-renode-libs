@@ -1,0 +1,10 @@
+using "./saml22n.repl"
+
+flash: Memory.MappedMemory @ nvmctrl 0x0
+    size: 0x10000
+
+rww: Memory.MappedMemory @ nvmctrl 0x400000
+    size: 0x800
+
+sram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x2000

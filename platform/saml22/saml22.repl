@@ -2,7 +2,7 @@ cpu: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     nvic: nvic
     numberOfMPURegions: 8
-    PerformanceInMips: 45
+    PerformanceInMips: 16
 
 
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000
@@ -10,17 +10,21 @@ nvic: IRQControllers.NVIC @ sysbus 0xE000E000
     IRQ -> cpu@0
 
 pm: Miscellaneous.Saml22PM @ sysbus 0x40000400
+    IRQ -> nvic@0
 
 
 mclk: Miscellaneous.Saml22MCLK @ sysbus 0x40000800
+    IRQ -> nvic@0
     gclk: gclk
     nvic: nvic
 
 oscctrl: Miscellaneous.Saml22OSCCTRL @ sysbus 0x40001000
+    IRQ -> nvic@0
     init:
-        StartOscillators
+        InitOscillators
 
 osc32kctrl: Miscellaneous.Saml22OSC32KCTRL @ sysbus 0x40001400
+    IRQ -> nvic@0
 
 supc: Miscellaneous.Saml22SUPC @ sysbus 0x40001800
 
@@ -38,11 +42,7 @@ usb: USB.Saml22USB @ sysbus 0x41000000
     gclk: gclk
     pchctrl: 6
 
-nvmctrl: MemoryControllers.Saml22NVMCTRL @ {
-    sysbus 0x41004000;
-    sysbus new Bus.BusMultiRegistration { address: 0x400000; size: 0x2000; region: "RWWEE" };
-    sysbus new Bus.BusMultiRegistration { address: 0x800000; size: 0xA100; region: "AUX" }
-}
+nvmctrl: MemoryControllers.Saml22NVMCTRLFlash @ sysbus 0x41004000
 
 tcc0: Timers.Saml22TCC @ sysbus 0x42001C00
     gclk: gclk
@@ -66,22 +66,14 @@ sercom3: Miscellaneous.Saml22SERCOM @ sysbus 0x42001000
     IRQ -> nvic@12
     gclk: gclk
     pchctrl: 19
-sercom4: Miscellaneous.Saml22SERCOM @ sysbus 0x42001400
-    IRQ -> nvic@13
-    gclk: gclk
-    pchctrl: 20
-sercom5: Miscellaneous.Saml22SERCOM @ sysbus 0x42001800
-    IRQ -> nvic@14
-    gclk: gclk
-    pchctrl: 21
 
 
 port: GPIOPort.Saml22Port @ {
         sysbus 0x41006000;
         sysbus new Bus.BusMultiRegistration { address: 0x60000000; size: 0x200; region: "IOBUS" }
     }
-pa: GPIOPort.Saml22PortGroup @ port 0
-pb: GPIOPort.Saml22PortGroup @ port 1
+IOGroupA: GPIOPort.Saml22PortGroup @ port 0
+IOGroupB: GPIOPort.Saml22PortGroup @ port 1
 
 adc: Analog.Saml22ADC @ sysbus 0x42003000
     gclk: gclk
