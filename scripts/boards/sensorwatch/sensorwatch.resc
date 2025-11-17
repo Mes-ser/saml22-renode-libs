@@ -6,22 +6,15 @@ include @platform/saml22/saml22_includes.resc
 include @peripherals/Mocks/DriverTest.cs
 
 mach create "sensor-watch"
-machine LoadPlatformDescription $ORIGIN/renode-platform/sensorwatch.repl
+machine LoadPlatformDescription $ORIGIN/sensorwatch.repl
 
-sysbus LoadELF @../Sensor-Watch/movement/make/build/watch.elf
+sysbus LoadELF $ORIGIN/watch.elf
 
 macro reset
 """
-    sysbus.cpu SP 0x200037F0
-    sysbus.cpu PC 0x3A65
+    sysbus.cpu VectorTableOffset 0x2000
 """
 
-# sysbus LogPeripheralAccess sysbus.osc32kctrl true
-# sysbus LogPeripheralAccess sysbus.oscctrl true
-# sysbus LogPeripheralAccess sysbus.mclk true
-# sysbus LogPeripheralAccess sysbus.gclk true
-sysbus LogPeripheralAccess sysbus.nvic true
-
-logLevel -1 sysbus.gclk
+# sysbus LogPeripheralAccess sysbus.nvmctrl true
 
 start

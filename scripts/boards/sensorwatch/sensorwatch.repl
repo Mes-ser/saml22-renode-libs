@@ -1,8 +1,8 @@
-using "../../platform/saml22/saml22j18a/saml22j18a.repl"
+using "../../../platform/saml22/saml22j/saml22j18.repl"
 
 
-pa:
-    0 -> pb@1
+IOGroupA:
+    0 -> IOGroupB@1
 
 osc32kctrl:
     UseXOSC32K: true

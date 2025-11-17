@@ -4,17 +4,15 @@
 
 include @platform/saml22/saml22_includes.resc
 
-include @peripherals/Mocks/DriverTest.cs
-
 mach create "saml22-xplained-pro"
 machine LoadPlatformDescription $ORIGIN/saml22_xplained_pro.repl
 
 macro reset
 """
-    sysbus.cpu VectorTableOffset 0x8000
+    # sysbus.cpu VectorTableOffset 0x8000
 """
 
-sysbus LoadELF $CWD/../saml22-base-project/app/build/app.elf
-# sysbus LoadELF $CWD/../saml22-base-project/bootloader/build/bootloader.elf
+# sysbus LoadELF @tests/bootloader.elf
 
-# machine StartGdbServer 3334 false
+machine StartGdbServer 3334 false
+showAnalyzer sysbus.sercom4
