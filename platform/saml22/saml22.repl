@@ -42,7 +42,7 @@ usb: USB.Saml22USB @ sysbus 0x41000000
     gclk: gclk
     pchctrl: 6
 
-nvmctrl: MemoryControllers.Saml22NVMCTRLFlash @ sysbus 0x41004000
+nvmctrl: MemoryControllers.Saml22NVMCTRL @ sysbus 0x41004000
 
 tcc0: Timers.Saml22TCC @ sysbus 0x42001C00
     gclk: gclk

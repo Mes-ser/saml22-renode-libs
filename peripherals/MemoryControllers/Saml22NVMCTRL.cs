@@ -1,19 +1,22 @@
 ﻿using System;
 using System.Linq;
+
 using Antmicro.Renode.Core;
+using Antmicro.Renode.Core.Structure;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Peripherals.Memory;
 using Antmicro.Renode.Utilities;
 
-namespace Antmicro.Renode.Peripherals.MemoryControllers
-{
-    public class Saml22NVMCTRL : IBytePeripheral, IWordPeripheral, IDoubleWordPeripheral, IKnownSize, IAbsoluteAddressAware
-    {
-        public Saml22NVMCTRL(Machine machine)
-        {
-            this.WarningLog("NVMCTRL works on RWWEE and AUX space.");
+namespace Antmicro.Renode.Peripherals.MemoryControllers {
+    public class Saml22NVMCTRLFlash : ArrayMemory, IMemory,
+        IBytePeripheral, IWordPeripheral, IDoubleWordPeripheral,
+        IAbsoluteAddressAware,
+        IPeripheralRegister<MappedMemory, NumberRegistrationPoint<ulong>> {
+
+        // Base class ArrayMemory is a dirty hack to allow NVMCTRL to be frontend for flash memory and allow to execute code.
+        public Saml22NVMCTRLFlash(Machine machine) : base(null) {
             _machine = machine;
 
             _interruptsManager = new InterruptManager<Interrupts>(this);
@@ -22,101 +25,290 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
             _wordRegisters = new WordRegisterCollection(this);
             _doubleWordRegisters = new DoubleWordRegisterCollection(this);
 
-            _rwweeMemory = new ArrayMemory(0x2000);
-            Erase(_rwweeMemory);
-            _auxMemory = new ArrayMemory(0xA100);
-            Erase(_auxMemory);
-
-            _pageBuffer = new PageBuffer(this);
+            _pageBuffer = new MappedMemory(_machine, MEMORY_PAGE_SIZE_BYTES);
+            _pageBuffer.ResetByte = 0xFF;
+            _pageBuffer.ZeroAll();
 
             DefineRegisters();
 
             _interruptsManager.SetInterrupt(Interrupts.Ready);
         }
 
-        public byte ReadByte(long offset) => _byteRegisters.Read(offset);
-        public ushort ReadWord(long offset) => _wordRegisters.Read(offset);
-        public uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
-        public void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
-        public void WriteWord(long offset, ushort value) => _wordRegisters.Write(offset, value);
-        public void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
+        public new byte ReadByte(long offset) => _byteRegisters.Read(offset);
+        public new ushort ReadWord(long offset) => _wordRegisters.Read(offset);
+        public new uint ReadDoubleWord(long offset) => _doubleWordRegisters.Read(offset);
+        public new void WriteByte(long offset, byte value) => _byteRegisters.Write(offset, value);
+        public new void WriteWord(long offset, ushort value) => _wordRegisters.Write(offset, value);
+        public new void WriteDoubleWord(long offset, uint value) => _doubleWordRegisters.Write(offset, value);
 
-        [ConnectionRegion("RWWEE")]
-        public byte ReadByteRWWEE(long offset) => _rwweeMemory.ReadByte(offset);
-        [ConnectionRegion("RWWEE")]
-        public ushort ReadWordRWWEE(long offset) => _rwweeMemory.ReadWord(offset);
-        [ConnectionRegion("RWWEE")]
-        public uint ReadDoubleWordRWWEE(long offset) => _rwweeMemory.ReadDoubleWord(offset);
-        [ConnectionRegion("RWWEE")]
-        public void WriteByteRWWEE(long offset, byte value)
-        {
-            _ = offset;
-            _ = value;
-            _interruptsManager.SetInterrupt(Interrupts.Error);
+        // While using 'sysbus LoadELF' Connection Regions aren't used, so this method (ArrayMemory.WriteBytes) is called.
+        public new void WriteBytes(long offset, byte[] bytes, int startingIndex, int count, IPeripheral context = null) {
+            if(_absoluteAddress >= (ulong)(MemoryRegionBaseAddr.Main) &&
+                    _absoluteAddress <= (ulong)(_mainMemory.Size - 1))
+                MainMemoryWriteBytes(offset, bytes, startingIndex, count, context);
+            else if(_absoluteAddress >= (ulong)(MemoryRegionBaseAddr.RWWEE) &&
+                            _absoluteAddress <= (ulong)((ulong)MemoryRegionBaseAddr.RWWEE + (ulong)_rwweeMemory.Size) - 1)
+                RWWEEMemoryWriteBytes(offset, bytes, startingIndex, count, context);
+            else if(_absoluteAddress >= (ulong)(MemoryRegionBaseAddr.AUX) &&
+                            _absoluteAddress <= (ulong)((ulong)MemoryRegionBaseAddr.AUX + (ulong)_auxMemory.Size) - 1)
+                AUXWriteBytes(offset, bytes, startingIndex, count, context);
         }
-        [ConnectionRegion("RWWEE")]
-        public void WriteWordRWWEE(long offset, ushort value)
-        {
-            _ = offset;
-            _pageBuffer.Load(value);
-        }
-        [ConnectionRegion("RWWEE")]
-        public void WriteDoubleWordRWWEE(long offset, uint value)
-        {
-            _ = offset;
-            _ = value;
-            this.WarningLog("32-bit write to pageBuffer not implemented.");
+        public new byte[] ReadBytes(long offset, int count, IPeripheral context = null) {
+            if(_absoluteAddress >= (ulong)(MemoryRegionBaseAddr.Main) && _absoluteAddress <= (ulong)(_mainMemory.Size - 1))
+                return MainMemoryReadBytes(offset, count, context);
+            else if(_absoluteAddress >= (ulong)(MemoryRegionBaseAddr.RWWEE) && _absoluteAddress <= (ulong)((ulong)MemoryRegionBaseAddr.RWWEE + (ulong)_rwweeMemory.Size) - 1)
+                return RWWEEMemoryReadBytes(offset, count, context);
+            else if(_absoluteAddress >= (ulong)(MemoryRegionBaseAddr.AUX) && _absoluteAddress <= (ulong)((ulong)MemoryRegionBaseAddr.AUX + (ulong)_auxMemory.Size) - 1)
+                return AUXReadBytes(offset, count, context);
+
+            return Array.Empty<byte>();
         }
 
-        [ConnectionRegion("AUX")]
-        public byte ReadByteAUX(long offset) => _auxMemory.ReadByte(offset);
-        [ConnectionRegion("AUX")]
-        public ushort ReadWordAUX(long offset) => _auxMemory.ReadWord(offset);
-        [ConnectionRegion("AUX")]
-        public uint ReadDoubleWordAUX(long offset) => _auxMemory.ReadDoubleWord(offset);
-        [ConnectionRegion("AUX")]
-        public void WriteByteAUX(long offset, byte value)
-        {
-            _ = offset;
+        /**** START MAIN MEMORY ****/
+        [ConnectionRegion("MainMemory")]
+        public void MainMemoryWriteByte(long offset, byte value) {
             _ = value;
-            _interruptsManager.SetInterrupt(Interrupts.Error);
+            this.ErrorLog($"Illegal Byte write at [0x{offset:x}].");
         }
-        [ConnectionRegion("AUX")]
-        public void WriteWordAUX(long offset, ushort value)
-        {
-            _ = offset;
-            _ = value;
-            _pageBuffer.Load(value);
-        }
-        [ConnectionRegion("AUX")]
-        public void WriteDoubleWordAUX(long offset, uint value)
-        {
-            _ = offset;
-            _ = value;
-            this.WarningLog("32-bit write to pageBuffer not implemented.");
-        }
-
-        public void SetAbsoluteAddress(ulong address)
-        {
-            _sector = (Sector)(address & 0xFFFF0000);
-
-            if (_sector != Sector.Control)
-            {
-                _memorySector = _sector;
-                _addr.Value = (address & 0x1FFFF) >> 1;
+        [ConnectionRegion("MainMemory")]
+        public void MainMemoryWriteWord(long offset, ushort value) {
+            if(_mainMemory != null) {
+                this.ErrorLog($"Page [0x{offset & (MEMORY_PAGE_SIZE_BYTES - 1):x}], Offset [0x{offset:x}]");
+                _pageBuffer.WriteWord(offset & (MEMORY_PAGE_SIZE_BYTES - 1), value);
             }
+            else
+                this.WarningLog($"TODO: Invalid memory Word write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("MainMemory")]
+        public void MainMemoryWriteDoubleWord(long offset, uint value) {
+            if(_mainMemory != null) {
+                this.ErrorLog($"Page [0x{offset & (MEMORY_PAGE_SIZE_BYTES - 1):x}], Offset [0x{offset:x}]");
+                _pageBuffer.WriteDoubleWord(offset & (MEMORY_PAGE_SIZE_BYTES - 1), value);
+            }
+            else
+                this.WarningLog($"TODO: Invalid memory Double Word write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("MainMemory")]
+        public void MainMemoryWriteQuadWord(long offset, ulong value) => throw new NotImplementedException();
+        [ConnectionRegion("MainMemory")]
+        public void MainMemoryWriteBytes(long offset, byte[] array, int startingIndex, int count, IPeripheral context = null) {
+            if(_mainMemory != null)
+                _mainMemory.WriteBytes(offset & (_mainMemory.Size - 1), array, startingIndex, count, context);
+            else
+                this.WarningLog($"TODO: Invalid memory bytes write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("MainMemory")]
+        public byte MainMemoryReadByte(long offset) {
+            if(_mainMemory != null)
+                return _mainMemory.ReadByte(offset & (_mainMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Byte read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("MainMemory")]
+        public ushort MainMemoryReadWord(long offset) {
+            if(_mainMemory != null)
+                return _mainMemory.ReadWord(offset & (_mainMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Word read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("MainMemory")]
+        public uint MainMemoryReadDoubleWord(long offset) {
+            if(_mainMemory != null)
+                return _mainMemory.ReadDoubleWord(offset & (_mainMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Double Word read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("MainMemory")]
+        public byte[] MainMemoryReadBytes(long offset, int count, IPeripheral context = null) => throw new NotImplementedException();
+        [ConnectionRegion("MainMemory")]
+        public ulong MainMemoryReadQuadWord(long offset) => throw new NotImplementedException();
+        /**** END MAIN MEMORY ****/
+
+        /**** START RWWEE MEMORY ****/
+        [ConnectionRegion("RWWEEMemory")]
+        public void RWWEEMemoryWriteByte(long offset, byte value) {
+            _ = value;
+            this.ErrorLog($"Illegal Byte write at [0x{offset:x}].");
+        }
+        [ConnectionRegion("RWWEEMemory")]
+        public void RWWEEMemoryWriteWord(long offset, ushort value) {
+            if(_rwweeMemory != null) {
+                this.ErrorLog($"Page [0x{offset & (MEMORY_PAGE_SIZE_BYTES - 1):x}], Offset [0x{offset:x}]");
+                _pageBuffer.WriteWord(offset & (MEMORY_PAGE_SIZE_BYTES - 1), value);
+            }
+            else
+                this.WarningLog($"TODO: Invalid memory Word write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("RWWEEMemory")]
+        public void RWWEEMemoryWriteDoubleWord(long offset, uint value) {
+            if(_rwweeMemory != null) {
+                this.ErrorLog($"Page [0x{offset & (MEMORY_PAGE_SIZE_BYTES - 1):x}], Offset [0x{offset:x}]");
+                _pageBuffer.WriteDoubleWord(offset & (MEMORY_PAGE_SIZE_BYTES - 1), value);
+            }
+            else
+                this.WarningLog($"TODO: Invalid memory Double Word write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("RWWEEMemory")]
+        public void RWWEEMemoryWriteQuadWord(long offset, ulong value) => throw new NotImplementedException();
+        [ConnectionRegion("RWWEEMemory")]
+        public void RWWEEMemoryWriteBytes(long offset, byte[] array, int startingIndex, int count, IPeripheral context = null) {
+            if(_rwweeMemory != null)
+                _rwweeMemory.WriteBytes(offset & (_rwweeMemory.Size - 1), array, startingIndex, count, context);
+            else
+                this.WarningLog($"TODO: Invalid memory bytes write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("RWWEEMemory")]
+        public byte RWWEEMemoryReadByte(long offset) {
+            if(_rwweeMemory != null)
+                return _rwweeMemory.ReadByte(offset & (_rwweeMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Byte read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("RWWEEMemory")]
+        public ushort RWWEEMemoryReadWord(long offset) {
+            if(_rwweeMemory != null)
+                return _rwweeMemory.ReadWord(offset & (_rwweeMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Word read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("RWWEEMemory")]
+        public uint RWWEEMemoryReadDoubleWord(long offset) {
+            if(_rwweeMemory != null)
+                return _rwweeMemory.ReadDoubleWord(offset & (_rwweeMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Double Word read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("RWWEEMemory")]
+        public byte[] RWWEEMemoryReadBytes(long offset, int count, IPeripheral context = null) => throw new NotImplementedException();
+        [ConnectionRegion("RWWEEMemory")]
+        public ulong RWWEEMemoryReadQuadWord(long offset) => throw new NotImplementedException();
+        /**** END RWWEE MEMORY ****/
+
+        /**** START AUX MEMORY ****/
+        [ConnectionRegion("AUXMemory")]
+        public void AUXWriteByte(long offset, byte value) {
+            _ = value;
+            this.ErrorLog($"Illegal Byte write at [0x{offset:x}].");
+        }
+        [ConnectionRegion("AUXMemory")]
+        public void AUXWriteWord(long offset, ushort value) {
+            if(_auxMemory != null) {
+                this.ErrorLog($"Page [0x{offset & (MEMORY_PAGE_SIZE_BYTES - 1):x}], Offset [0x{offset:x}]");
+                _pageBuffer.WriteWord(offset & (MEMORY_PAGE_SIZE_BYTES - 1), value);
+            }
+            else
+                this.WarningLog($"TODO: Invalid memory Word write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("AUXMemory")]
+        public void AUXWriteDoubleWord(long offset, uint value) {
+            if(_auxMemory != null) {
+                this.ErrorLog($"Page [0x{offset & (MEMORY_PAGE_SIZE_BYTES - 1):x}], Offset [0x{offset:x}]");
+                _pageBuffer.WriteDoubleWord(offset & (MEMORY_PAGE_SIZE_BYTES - 1), value);
+            }
+            else
+                this.WarningLog($"TODO: Invalid memory Double Word write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("AUXMemory")]
+        public void AUXWriteQuadWord(long offset, ulong value) => throw new NotImplementedException();
+        [ConnectionRegion("AUXMemory")]
+        public void AUXWriteBytes(long offset, byte[] array, int startingIndex, int count, IPeripheral context = null) {
+            if(_auxMemory != null)
+                _auxMemory.WriteBytes(offset & (_auxMemory.Size - 1), array, startingIndex, count, context);
+            else
+                this.WarningLog($"TODO: Invalid memory bytes write at [0x{offset:x}]");
+        }
+        [ConnectionRegion("AUXMemory")]
+        public byte AUXReadByte(long offset) {
+            if(_auxMemory != null)
+                return _auxMemory.ReadByte(offset & (_auxMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Byte read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("AUXMemory")]
+        public ushort AUXReadWord(long offset) {
+            if(_auxMemory != null)
+                return _auxMemory.ReadWord(offset & (_auxMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Word read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("AUXMemory")]
+        public uint AUXReadDoubleWord(long offset) {
+            if(_auxMemory != null)
+                return _auxMemory.ReadDoubleWord(offset & (_auxMemory.Size - 1));
+            else
+                this.WarningLog($"TODO: Invalid memory Double Word read at [0x{offset:x}]");
+            return 0x0;
+        }
+        [ConnectionRegion("AUXMemory")]
+        public byte[] AUXReadBytes(long offset, int count, IPeripheral context = null) => throw new NotImplementedException();
+        [ConnectionRegion("AUXMemory")]
+        public ulong AUXReadQuadWord(long offset) => throw new NotImplementedException();
+        /**** END AUX MEMORY ****/
+
+        public void SetAbsoluteAddress(ulong address) {
+            if(address >= 0x0 && address <= (ulong)(0x20000000 - (sizeof(ushort))))
+                _addr.Value = (ulong)(address >> 1) & 0x1FFFFF;
+            _absoluteAddress = address;
         }
 
-        public void Reset()
-        {
+        public new void Reset() {
             _byteRegisters.Reset();
             _wordRegisters.Reset();
             _doubleWordRegisters.Reset();
-            _pageBuffer.Clear();
+            _pageBuffer.ZeroAll();
         }
 
-        private void DefineRegisters()
-        {
+        public void Register(MappedMemory peripheral, NumberRegistrationPoint<ulong> registrationPoint) {
+            ArgumentNullException.ThrowIfNull(peripheral);
+            ArgumentNullException.ThrowIfNull(registrationPoint);
+
+            MemoryRegionBaseAddr region = (MemoryRegionBaseAddr)registrationPoint.Address;
+
+            peripheral.ResetByte = 0xFF;
+            peripheral.ZeroAll();
+
+            switch(region) {
+            case MemoryRegionBaseAddr.Main:
+                if(_mainMemory != null)
+                    throw new Exception($"{region} region already registered.");
+                _mainMemory = peripheral;
+                registerMemoryRegion(_mainMemory, registrationPoint, "MainMemory");
+                break;
+            case MemoryRegionBaseAddr.RWWEE:
+                if(_rwweeMemory != null)
+                    throw new Exception($"{region} region already registered.");
+                _rwweeMemory = peripheral;
+                registerMemoryRegion(_rwweeMemory, registrationPoint, "RWWEEMemory");
+                break;
+            case MemoryRegionBaseAddr.AUX:
+                if(_auxMemory != null)
+                    throw new Exception($"{region} region already registered.");
+                _auxMemory = peripheral;
+                registerMemoryRegion(_auxMemory, registrationPoint, $"AUXMemory");
+                break;
+            default:
+                throw new ArgumentException($"Invalid Registration Point 0x{registrationPoint.Address:x}");
+            }
+        }
+
+        private void registerMemoryRegion(MappedMemory memoryRegion, NumberRegistrationPoint<ulong> registrationPoint, string regionName) {
+            _machine.RegisterAsAChildOf(this, memoryRegion, registrationPoint);
+            _machine.SystemBus.Register(this, new Bus.BusMultiRegistration((ulong)registrationPoint.Address, (ulong)memoryRegion.Size, regionName));
+        }
+
+        public void Unregister(MappedMemory peripheral) {
+            throw new NotImplementedException();
+        }
+
+        private void DefineRegisters() {
             _wordRegisters.DefineRegister((long)Registers.CTRLA);
             _wordRegisters.AddAfterWriteHook((long)Registers.CTRLA, CommandExecution);
 
@@ -128,12 +320,10 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
 
             _byteRegisters.AddRegister((long)Registers.INTENCLR, _interruptsManager.GetInterruptEnableClearRegister<ByteRegister>());
             _byteRegisters.AddRegister((long)Registers.INTENSET, _interruptsManager.GetInterruptEnableSetRegister<ByteRegister>());
-            _byteRegisters.AddRegister((long)Registers.INTFLAG, _interruptsManager.GetRegister<ByteRegister>(writeCallback: (irq, oldValue, newValue) =>
-            {
-                if (newValue && irq != Interrupts.Ready)
+            _byteRegisters.AddRegister((long)Registers.INTFLAG, _interruptsManager.GetRegister<ByteRegister>(writeCallback: (irq, oldValue, newValue) => {
+                if(newValue && irq != Interrupts.Ready)
                     _interruptsManager.ClearInterrupt(irq);
-            }, valueProviderCallback: (irq, _) =>
-            {
+            }, valueProviderCallback: (irq, _) => {
                 return _interruptsManager.IsSet(irq);
             }));
 
@@ -148,92 +338,116 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
                                                                    // .WithIgnoredBits(9, 7);
 
             _doubleWordRegisters.DefineRegister((long)Registers.ADDR)
-                .WithValueField(0, 17, out _addr, name: "ADDR")
-                .WithIgnoredBits(17, 15);
+                .WithValueField(0, 21, out _addr, name: "ADDR")
+                .WithIgnoredBits(21, 11);
 
             _wordRegisters.DefineRegister((long)Registers.LOCK); // Reset value determined by NV memory user row
         }
 
-        private static void Erase(ArrayMemory accessedMemory)
-        {
-            for (long i = 0; i < accessedMemory.Size / 0x8; i++)
-            {
+        private IMemory GetMemoryByAddress(long offset) {
+            try {
+                if(offset >= (long)MemoryRegionBaseAddr.Main && offset < _mainMemory.Size)
+                    return _mainMemory;
+            }
+            catch(NullReferenceException) {
+                this.ErrorLog("Main Memory not set. See .repl file.");
+            }
+
+            try {
+                if(offset >= (long)MemoryRegionBaseAddr.RWWEE && offset - (long)MemoryRegionBaseAddr.RWWEE < _rwweeMemory.Size)
+                    return _rwweeMemory;
+            }
+            catch(NullReferenceException) {
+                this.ErrorLog("RWWEE Memory not set. See .repl file.");
+            }
+
+            try {
+                if(offset >= (long)MemoryRegionBaseAddr.AUX && offset - (long)MemoryRegionBaseAddr.AUX < _auxMemory.Size)
+                    return _auxMemory;
+            }
+            catch(NullReferenceException) {
+                this.ErrorLog("AUX Memory not set. See .repl file.");
+            }
+            return null;
+        }
+
+        private static void Erase(IMemory accessedMemory) {
+            for(long i = 0; i < accessedMemory.Size / 0x8; i++) {
                 accessedMemory.WriteQuadWord(0x8 * i, ulong.MaxValue);
             }
         }
-        private void EraseRow(ArrayMemory memory)
-        {
-            this.InfoLog($"Erase Row [{Row}] ");
-            memory.WriteBytes((long)Row * (MEMORY_PAGE_SIZE_BYTES * 4),
+        private void EraseRow(IMemory memory) {
+            this.InfoLog($"Erase Row [{_rowNumber}] ");
+            memory.WriteBytes((long)_rowNumber * (MEMORY_PAGE_SIZE_BYTES * 4),
                 Enumerable.Repeat<byte>(0xFF, MEMORY_PAGE_SIZE_BYTES * 4).ToArray(),
                 0,
                 MEMORY_PAGE_SIZE_BYTES * 4
             );
         }
 
-        private void WriteToMemory(ArrayMemory memory)
-        {
+        private void WriteToMemory(IMemory memory) {
             ArgumentNullException.ThrowIfNull(memory);
 
-            long offset = (long)((Row * (MEMORY_PAGE_SIZE_BYTES * 4)) + (Page * MEMORY_PAGE_SIZE_BYTES));
-            for (int index = 0; index < _pageBuffer.Buffer.Length; index++)
-            {
+            long offset = (long)((_rowNumber * (MEMORY_PAGE_SIZE_BYTES * 4)) + (_page * MEMORY_PAGE_SIZE_BYTES));
+            for(int index = 0; index < _pageBuffer.Size / 8; index++) {
                 ulong currentData = memory.ReadQuadWord(offset + (index * sizeof(ulong)));
-                memory.WriteQuadWord(offset + (index * sizeof(ulong)), currentData & _pageBuffer.Buffer[index]);
+                memory.WriteQuadWord(offset + (index * sizeof(ulong)), currentData & _pageBuffer.ReadQuadWord(sizeof(ulong) * index));
             }
-            _pageBuffer.Clear();
+            _pageBuffer.ZeroAll();
         }
 
-        private void CommandExecution(long offset, ushort value)
-        {
+        private void CommandExecution(long offset, ushort value) {
             Command cmd = (Command)(value & 0x7F);
             int CommandExecution = value >> 8;
-            if (CommandExecution == 0xA5)
-            {
-                switch (cmd)
-                {
-                    case Command.ER:
-                    case Command.WP:
-                        // TODO: How to get offset at which Main Array was accessed?
-                        this.WarningLog("NVMCTRL can't operate on Main Array.");
-                        break;
-                    case Command.EAR:
-                        EraseRow(_auxMemory);
-                        break;
-                    case Command.WAR:
-                        WriteToMemory(_auxMemory);
-                        break;
-                    case Command.RWWEEER:
-                        EraseRow(_rwweeMemory);
-                        break;
-                    case Command.RWWEEWP:
-                        WriteToMemory(_rwweeMemory);
-                        break;
-                    case Command.PBC:
-                        _pageBuffer.Clear();
-                        break;
-                    default:
-                        this.WarningLog($"Command {cmd} is not supported.");
-                        break;
+            if(CommandExecution == 0xA5) {
+                switch(cmd) {
+                case Command.ER:
+                    EraseRow(_mainMemory);
+                    break;
+                case Command.WP:
+                    WriteToMemory(_mainMemory);
+                    break;
+                case Command.EAR:
+                    EraseRow(_auxMemory);
+                    break;
+                case Command.WAR:
+                    WriteToMemory(_auxMemory);
+                    break;
+                case Command.RWWEEER:
+                    EraseRow(_rwweeMemory);
+                    break;
+                case Command.RWWEEWP:
+                    WriteToMemory(_rwweeMemory);
+                    break;
+                case Command.PBC:
+                    _pageBuffer.ZeroAll();
+                    break;
+                default:
+                    this.WarningLog($"Command {cmd} is not supported.");
+                    break;
                 }
             }
-            else
-            {
+            else {
                 this.ErrorLog("An invalid Keyword was writtern in the NVM Command register.");
             }
         }
+
+        public new long Size => 0x200;
+        [IrqProvider]
+        public GPIO IRQ { get; } = new GPIO();
 
         private readonly Machine _machine;
         private readonly InterruptManager<Interrupts> _interruptsManager;
         private readonly ByteRegisterCollection _byteRegisters;
         private readonly WordRegisterCollection _wordRegisters;
         private readonly DoubleWordRegisterCollection _doubleWordRegisters;
-        private readonly PageBuffer _pageBuffer;
-        private readonly ArrayMemory _rwweeMemory;
-        private readonly ArrayMemory _auxMemory;
+        private readonly MappedMemory _pageBuffer;
 
-        private Sector _sector;
-        private Sector _memorySector;
+        private MappedMemory _mainMemory;
+        private MappedMemory _rwweeMemory;
+        private MappedMemory _auxMemory;
+
+        private ulong _absoluteAddress;
 
         // Registers fields
         private IFlagRegisterField _manualWrite;
@@ -241,23 +455,12 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
 
 
         private const int MEMORY_PAGE_SIZE_BYTES = 64;
-        private const long BASE_ADDR_OFFSET = 0x40000;
-        private const long RWW_SECTOR_BASE_ADDR = 0x400000;
-        private const long CALIB_AUX_BASE_ADDR = 0x800000;
-        private const long APB_BRIDGE_PBASE_ADDR = 0x41000000;
 
+        private ulong _writeOffset => _addr.Value << 1;
+        private ulong _rowNumber => _writeOffset / (MEMORY_PAGE_SIZE_BYTES * 4);
+        private ulong _page => (_writeOffset - (_rowNumber * MEMORY_PAGE_SIZE_BYTES * 4)) / MEMORY_PAGE_SIZE_BYTES;
 
-        public long Size => 0x2000;
-
-        [IrqProvider]
-        public GPIO IRQ { get; } = new GPIO();
-
-        private ulong WriteOffset => _addr.Value << 1;
-        private ulong Row => WriteOffset / (MEMORY_PAGE_SIZE_BYTES * 4);
-        private ulong Page => (WriteOffset - (Row * MEMORY_PAGE_SIZE_BYTES * 4)) / MEMORY_PAGE_SIZE_BYTES;
-
-        private enum Command
-        {
+        private enum Command {
             ER = 0x02,
             WP = 0x04,
             EAR = 0x05,
@@ -273,16 +476,14 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
             INVALL = 0x46,
         }
 
-        private enum Sector
-        {
-            MainArray = 0x0,
-            RWWEE = 0x00400000,
-            AUX = 0x00800000,
-            Control = 0x41000000
+        // TODO: Add user row const (AUX Bse + 0x4000)
+        private enum MemoryRegionBaseAddr {
+            Main = 0x0,
+            RWWEE = 0x400000,
+            AUX = 0x800000
         }
 
-        private enum Registers : long
-        {
+        private enum Registers : long {
             CTRLA = 0x0,
             CTRLB = 0x04,
             PARAM = 0x08,
@@ -294,67 +495,10 @@ namespace Antmicro.Renode.Peripherals.MemoryControllers
             LOCK = 0x20
         }
 
-        private enum Interrupts
-        {
+        private enum Interrupts {
             Ready = 0,
             Error = 1
         }
 
-        private sealed class PageBuffer
-        {
-
-            public PageBuffer(Saml22NVMCTRL parent)
-            {
-                _parent = parent;
-                Clear();
-            }
-
-            public void Load(ushort data)
-            {
-                // Random access writes to 32-bit words within the page buffer will overwrite the opposite word within the same 64-bit section with ones.
-                if (IsBoundaryCrossed)
-                    Buffer[DoubleWordDataIndex] = 0xFFFF_FFFF;
-
-                if (WordDataIndex % 2 == 0)
-                {
-                    Buffer[DoubleWordDataIndex] &= 0xFFFF_0000;
-                    Buffer[DoubleWordDataIndex] |= data | 0xFFFF_0000;
-                }
-                else
-                {
-                    Buffer[DoubleWordDataIndex] &= 0x0000_FFFF;
-                    Buffer[DoubleWordDataIndex] |= ((uint)data) << 16;
-                }
-                // parent.WarningLog($"pageBuffer[{Page32BitDataIndex}] [0x{page[Page32BitDataIndex]:X8}]");
-                _previousPage32BitDataIndex = DoubleWordDataIndex;
-                if (!_parent._manualWrite.Value && WordDataIndex >= 15)
-                {
-                    switch (_parent._memorySector)
-                    {
-                        case Sector.RWWEE:
-                            _parent.WriteToMemory(_parent._rwweeMemory);
-                            break;
-                        case Sector.AUX:
-                            _parent.WriteToMemory(_parent._auxMemory);
-                            break;
-                    }
-                }
-            }
-
-            public void Clear()
-            {
-                for (int index = 0; index < Buffer.Length; index++)
-                    Buffer[index] = uint.MaxValue;
-                _previousPage32BitDataIndex = 0;
-            }
-
-            private readonly Saml22NVMCTRL _parent;
-            private long _previousPage32BitDataIndex;
-
-            public uint[] Buffer { get; } = new uint[16];
-            private long DoubleWordDataIndex => (long)(_parent.WriteOffset & (MEMORY_PAGE_SIZE_BYTES - 1)) / sizeof(uint);
-            private long WordDataIndex => (long)(_parent.WriteOffset & (MEMORY_PAGE_SIZE_BYTES - 1)) / sizeof(ushort);
-            private bool IsBoundaryCrossed => DoubleWordDataIndex != _previousPage32BitDataIndex;
-        }
     }
 }

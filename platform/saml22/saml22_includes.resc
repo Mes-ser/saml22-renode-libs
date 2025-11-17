@@ -12,8 +12,6 @@ include @peripherals/Miscellaneous/Saml22RTC.cs
 # EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.Saml22RTC"
 include @peripherals/MemoryControllers/Saml22NVMCTRL.cs
 
-include @peripherals/MemoryControllers/Saml22NVMCTRLFlash.cs
-
 include @peripherals/Miscellaneous/Saml22PM.cs
 include @peripherals/Miscellaneous/Saml22OSC32KCTRL.cs
 include @peripherals/Miscellaneous/Saml22GCLK.cs
