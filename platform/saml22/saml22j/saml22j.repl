@@ -1,4 +1,4 @@
 using "../saml22.repl"
 
-aux: Memory.MappedMemory @ nvmctrl 0x800000
+aux: Memory.Saml22NVM @ nvmctrl 0x800000
     size: 0xA050

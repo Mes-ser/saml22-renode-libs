@@ -1,15 +1,12 @@
 ### INCLUDES ###
 include @peripherals/Miscellaneous/ISAML22OSCCTRL.cs
-# EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22OSCClock"
 include @peripherals/Miscellaneous/ISAML22OSC32KCTRL.cs
-# EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22OSC32KClock"
 include @peripherals/Miscellaneous/ISAML22GCLK.cs
-# EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SAML22GCLKClock"
 
 include @peripherals/Saml22MemoryMap.cs
-# EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Saml22MemoryMap"
 include @peripherals/Miscellaneous/Saml22RTC.cs
-# EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.Saml22RTC"
+
+include @peripherals/Memory/Saml22NVM.cs
 include @peripherals/MemoryControllers/Saml22NVMCTRL.cs
 
 include @peripherals/Miscellaneous/Saml22PM.cs
@@ -24,7 +21,6 @@ include @peripherals/Analog/Saml22ADC.cs
 include @peripherals/USB/Saml22USB.cs
 include @peripherals/Miscellaneous/Saml22SLCD.cs
 include @peripherals/GPIOPort/Saml22PortGroup.cs
-# EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.Saml22PortGroup"
 include @peripherals/GPIOPort/Saml22Port.cs
 
 include @peripherals/Miscellaneous/Saml22_SERCOM/Saml22SERCOM.cs

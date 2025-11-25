@@ -10,7 +10,7 @@ sercom5: Miscellaneous.Saml22SERCOM @ sysbus 0x42001800
     gclk: gclk
     pchctrl: 21
 
-aux: Memory.MappedMemory @ nvmctrl 0x800000
+aux: Memory.Saml22NVM @ nvmctrl 0x800000
     size: 0xA050
 
 IOGroupC: GPIOPort.Saml22PortGroup @ port 2
